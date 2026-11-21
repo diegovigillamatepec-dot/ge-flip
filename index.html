@@ -141,7 +141,7 @@ main.wrap{padding-top:var(--s6);padding-bottom:var(--s7)}
 /* ---------- signal ---------- */
 .sig{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-sm);font-weight:600;white-space:nowrap}
 .sig i{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
-.s-BUY{color:var(--up)} .s-DUMP{color:var(--info)} .s-SELL{color:var(--warn)} .s-FALLING{color:var(--down)} .s-WAIT,.s-THIN{color:var(--ink-3)}
+.s-BUY{color:var(--up)} .s-SOON{color:var(--accent)} .s-DUMP{color:var(--info)} .s-SELL{color:var(--warn)} .s-FALLING{color:var(--down)} .s-WAIT,.s-THIN,.s-NOCYCLE{color:var(--ink-3)}
 
 /* ---------- market table ---------- */
 .toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--s4) var(--s5);margin-bottom:var(--s4)}
@@ -326,7 +326,7 @@ details.settings summary::-webkit-details-marker{display:none}
         </div>
         <div class="grp">
           <label class="field"><span>Accounts</span><select class="select" id="fMem"><option value="all">All items</option><option value="p2p">Members</option><option value="f2p">Free-to-play</option></select></label>
-          <label class="field"><span>Signal</span><select class="select" id="fSig"><option value="">Any</option><option value="BUY">Buy</option><option value="NEAR">Near floor</option><option value="DUMP">Dump</option><option value="SELL">Sell</option><option value="analyzed">Scanned only</option></select></label>
+          <label class="field"><span>Signal</span><select class="select" id="fSig"><option value="">Any</option><option value="BUY">Buy now</option><option value="SOON">Dip ahead</option><option value="NEAR">Near floor</option><option value="DUMP">Dump</option><option value="SELL">Sell</option><option value="analyzed">Scanned only</option></select></label>
         </div>
         <div class="grp">
           <label class="field"><span>Min volume 24h</span><input class="input" type="number" id="fVol" min="0" step="100"></label>
@@ -348,7 +348,7 @@ details.settings summary::-webkit-details-marker{display:none}
       <div class="section-head">
         <div>
           <h1 id="pinTitle">Your pinned items</h1>
-          <p>Rechecked every 5 minutes, sorted by distance to their floor.</p>
+          <p>Rechecked every 5 minutes.</p>
         </div>
         <div class="cta"><button class="btn-primary" id="btnWatchRefresh"></button></div>
       </div>
@@ -357,8 +357,8 @@ details.settings summary::-webkit-details-marker{display:none}
     <section class="section">
       <div class="section-head">
         <div>
-          <h2 id="nearTitle">Near their floor now</h2>
-          <p>Scanned in the last 30 minutes, at or near their floor or dumping, with profit left after tax.</p>
+          <h2 id="nearTitle">Items to buy now or later today</h2>
+          <p>Scanned in the last 30 minutes. Dumps first, then items in their daily dip, then dips coming up later today.</p>
         </div>
       </div>
       <div id="nearBody"></div>
@@ -377,21 +377,31 @@ details.settings summary::-webkit-details-marker{display:none}
         <li>A warning icon marks a one-off trade far from the last hour's average. The margin uses the average instead, so a fat-finger trade can't top the list.</li>
         <li><b>Profit / 4h</b> is the margin times what you can move in one buy-limit window: the buy limit, or your share of the 4-hour volume if that's lower.</li>
       </ul>
-      <h2>How a scan reads the cycle</h2>
+      <h2>Are OSRS daily cycles real?</h2>
+      <p>For some items, yes. A test on the 86 most-traded items over the past week (Wiki prices, November 2026) found:</p>
       <ul>
-        <li><b>Floor</b> is the lowest instant-sell price the item held for about 3 hours on any of the last 7 days. One-off dumps don't count. After a clear move into a higher range, only the new range counts.</li>
-        <li><b>Buy at</b> is the price the item dipped to in at least half of the last 24 hours. <b>Sell at</b> is the price buyers paid in at least half of them. If the live price is already better, the live price is used.</li>
-        <li><b>Target net</b> is Sell at minus tax minus Buy at: the margin you get by waiting for the cycle instead of flipping instantly.</li>
-        <li><b>Gap</b> is how far today's instant-sell price sits above the floor. Negative means under it.</li>
-        <li>The <b>daily cycle</b> chart averages the price by hour of your day over 7 days, so you can see when an item is usually cheapest.</li>
+        <li>Most items don't repeat the same shape each day. The average day matched the rest of the week with a score of only 0.20 out of 1, and only 7 of 86 items scored 0.5 or more.</li>
+        <li>The typical daily swing was 1.6%, smaller than the 2% GE tax. Many swings are just noise.</li>
+        <li>Buying near the weekly floor and waiting had no edge: it lost about 1.2% per trade after tax, the same as buying at a random time.</li>
+        <li>Buying at an item's usual low hour and selling at its usual high hour, only when the pattern had held on earlier days and the swing beat the tax, made about +1.3% per trade and won 62% of the time. Each trade was picked using only earlier days, so the test couldn't peek ahead.</li>
+      </ul>
+      <p>So the signals now follow each item's own daily pattern and skip items that don't have one. One week is a small sample, so treat the numbers as a guide.</p>
+      <h2>How a scan reads each item</h2>
+      <ul>
+        <li><b>Daily pattern</b>: the last 7 days of hourly prices, grouped by hour of your day. Each day is compared with the others; a match score of 0.4 or more means the shape repeats.</li>
+        <li><b>Buy at / Sell at</b>: for items with a dependable pattern, today's price level times the usual low at the cheap hour and the usual high at the peak hour. For other items, the prices reached in half of the last 24 hours.</li>
+        <li><b>Target net</b>: Sell at minus tax minus Buy at.</li>
+        <li><b>Past-week test</b>: the same rule replayed on each past day using only the days before it, and how many of those trades made money.</li>
+        <li><b>Floor</b>: the lowest price the item held for about 3 hours in the last 7 days. It's shown for context and no longer triggers a buy.</li>
       </ul>
       <h2>What each signal means</h2>
       <ul>
-        <li><span class="sig s-BUY"><i></i>Buy</span> In the bottom quarter of its daily range or near its floor, with profit left after tax.</li>
+        <li><span class="sig s-BUY"><i></i>Buy now</span> Dependable daily pattern, and it's at or near its usual low hour or already at the buy price.</li>
+        <li><span class="sig s-SOON"><i></i>Dip ahead</span> Dependable pattern, but the low hour is later. The card says when.</li>
+        <li><span class="sig s-SELL"><i></i>Sell</span> At its usual high hour, or the price just spiked. A good moment to list what you hold.</li>
         <li><span class="sig s-DUMP"><i></i>Dump</span> The last 15 minutes traded well under the 24h median on heavy sell volume. Often a buy, but check the news first.</li>
-        <li><span class="sig s-SELL"><i></i>Sell</span> In the top quarter of its range or spiking. A good moment to list what you hold.</li>
-        <li><span class="sig s-FALLING"><i></i>Falling</span> Near the bottom, but down more than 6% over 7 days, or broke under its floor while trading 3% below yesterday. The floor may not hold.</li>
-        <li><span class="sig s-WAIT"><i></i>Wait</span> Mid-range. <span class="sig s-THIN"><i></i>Thin</span> Too few trades to read a cycle.</li>
+        <li><span class="sig s-FALLING"><i></i>Falling</span> Down more than 6% over the week, so each day's dip is lower than the last.</li>
+        <li><span class="sig s-NOCYCLE"><i></i>No cycle</span> No dependable daily pattern, or one too small to beat the tax. Only flip it on a positive live margin. <span class="sig s-THIN"><i></i>Thin</span> Too few trades to tell.</li>
       </ul>
       <h2>Things to keep in mind</h2>
       <ul>
@@ -441,6 +451,7 @@ function quantile(arr, q){
   return a[lo] + (a[hi]-a[lo])*(p-lo);
 }
 const median = a => quantile(a, .5);
+function hh(h){ return String(h).padStart(2,'0') + ':00'; }
 const mean = a => a.length ? a.reduce((s,x)=>s+x,0)/a.length : null;
 function iconUrl(icon){ return icon ? 'https://oldschool.runescape.wiki/images/' + encodeURIComponent(icon.replace(/ /g,'_')) : ''; }
 
@@ -481,7 +492,7 @@ const st = {
   map: new Map(),        // id -> mapping
   latest: {}, h1: {}, h24: {},
   tLatest: 0, t1h: 0, t24h: 0, err: null,
-  A: LS.get('analyses', {}), // id -> analysis
+  A: Object.fromEntries(Object.entries(LS.get('analyses', {})).filter(([k,a]) => a && a.v === 2)), // id -> analysis
   pins: new Set(LS.get('pins', [])),
   rows: [], view: [],
   shown: 150,
@@ -596,7 +607,7 @@ function sustainedDay(bk){
 
 function analyzeData(id, d5, d1, d6){
   const L = st.latest[id] || {};
-  const A = {id, t: now(), v: 1};
+  const A = {id, t: now(), v: 2};
 
   // ---- sell-through from hourly extremes (24h of 5m buckets) ----
   const byHour = new Map();
@@ -744,19 +755,94 @@ function analyzeData(id, d5, d1, d6){
     if (th.length && highs.length){ A.rise = Math.max(...th) / median(highs) - 1; A.spike = A.rise >= 0.08 && thv >= 3*mhv; }
   }
 
+  // ---- daily-cycle model (tested walk-forward on the last week) ----
+  const C = cycleModel(id, d1);
+  A.cyc = C ? {rel: C.rel, edge: C.edge, cheap: C.cheap, dear: C.dear, held: C.held, nd: C.nd, bt: C.bt} : null;
+  A.reliable = !!(C && C.rel >= 0.4 && C.edge >= 0.005);
+  const hNow = new Date().getHours();
+  const hd = (a, b) => Math.min((a - b + 24) % 24, (b - a + 24) % 24);
+  if (A.reliable){
+    // plan prices: today's level times the usual low at the cheap hour / high at the peak hour
+    const last24 = d1.slice(-24).filter(b => has(b.avgLowPrice) && has(b.avgHighPrice));
+    const level = last24.length ? mean(last24.map(b => (b.avgLowPrice + b.avgHighPrice) / 2)) : null;
+    if (has(level)){
+      A.buyAt = Math.ceil(level * C.mlo[C.cheap]);
+      A.sellAt = Math.floor(level * C.mhi[C.dear]);
+      A.net = A.sellAt - tax(A.sellAt, id) - A.buyAt;
+      A.roi = A.buyAt > 0 ? A.net / A.buyAt : null;
+      if (has(A.qty4)) A.profit4 = A.net * A.qty4;
+    }
+  }
+
   // ---- signal ----
-  let sig = 'WAIT', why = '';
+  let sig = 'NOCYCLE', why = '';
   const near = has(A.gap) && A.gap <= S.near/100;
-  if (A.thin || !has(A.floor)) { sig = 'THIN'; why = 'Not enough trades in the last day to read a cycle.'; }
-  else if (A.dump) { sig = 'DUMP'; why = 'Last 15 min traded ' + pctAbs(A.drop) + ' under the 24h median on heavy sell volume.'; }
-  else if ((near || (has(A.pos) && A.pos <= 0.25)) && has(A.trend7) && A.trend7 < -0.06) { sig = 'FALLING'; why = 'Near the bottom of its range, but the 7-day trend is ' + pct(A.trend7) + '. The floor may break.'; }
-  else if (has(A.gap) && A.gap < -0.01 && has(A.chg24) && A.chg24 < -0.03) { sig = 'FALLING'; why = 'Broke ' + pctAbs(-A.gap) + ' under its floor and is ' + pct(A.chg24) + ' vs the same hours yesterday. Wait for it to settle.'; }
-  else if ((near || (has(A.pos) && A.pos <= 0.25)) && has(A.net) && A.net > 0) { sig = 'BUY'; why = near ? (A.gap < 0 ? 'Trading ' + pctAbs(-A.gap) + ' under its floor.' : 'Within ' + pctAbs(A.gap) + ' of its floor.') : 'In the bottom quarter of its daily range.'; }
-  else if (A.spike || (has(A.pos) && A.pos >= 0.75)) { sig = 'SELL'; why = A.spike ? 'Instant-buy price spiked ' + pctAbs(A.rise) + ' over the 24h median.' : 'In the top quarter of its daily range.'; }
-  else { why = has(A.pos) ? 'Mid-range (' + Math.round(A.pos*100) + '% of the daily low-side range).' : 'Mid-range.'; }
-  if (A.regime === 'up') why += ' Price moved into a higher range recently, so the floor only uses the new range (7-day floor was ' + gp(A.floor7, 1) + ').';
+  const btTxt = C && C.bt.n ? ' Past-week test: ' + C.bt.wins + ' of ' + C.bt.n + ' trades made money, ' + pct(C.bt.avg) + ' average after tax.' : '';
+  if (A.thin || !has(A.floor)) { sig = 'THIN'; why = 'Too few trades to read a pattern.'; }
+  else if (A.dump) { sig = 'DUMP'; why = 'Last 15 min traded ' + pctAbs(A.drop) + ' under the 24h median on heavy sell volume. Check the news before buying.'; }
+  else if (has(A.trend7) && A.trend7 < -0.06) { sig = 'FALLING'; why = 'Down ' + pctAbs(-A.trend7) + ' over the last week, so daily dips keep getting lower.'; }
+  else if (A.reliable && has(A.net) && A.net > 0){
+    const inCheap = hd(hNow, C.cheap) <= 1 || (has(L.low) && L.low <= A.buyAt);
+    const inDear = hd(hNow, C.dear) <= 1 || (has(L.high) && L.high >= A.sellAt);
+    const pattern = 'It bottomed around ' + hh(C.cheap) + ' and peaked around ' + hh(C.dear) + ' on ' + C.held + ' of the last ' + C.nd + ' days.';
+    if (inCheap) { sig = 'BUY'; why = 'Daily dip is now. ' + pattern + btTxt; }
+    else if (inDear) { sig = 'SELL'; why = 'Daily peak is now, a good time to list. ' + pattern + btTxt; }
+    else { sig = 'SOON'; why = 'Buy around ' + hh(C.cheap) + ', sell around ' + hh(C.dear) + '. ' + pattern + btTxt; }
+  }
+  else if (A.spike) { sig = 'SELL'; why = 'Instant-buy price spiked ' + pctAbs(A.rise) + ' over the 24h median.'; }
+  else if (C && C.rel >= 0.4) { why = 'Repeats a daily pattern, but the swing is smaller than the 2% tax. Only worth it on a live margin.'; }
+  else { why = 'No dependable daily pattern: the price moved differently each day. Only worth flipping on a live margin.'; }
   A.sig = sig; A.why = why; A.near = near;
   return A;
+}
+
+// Daily pattern by hour of your day, from the last 7 days of hourly prices.
+// rel: how well each day matches the other days (leave-one-day-out correlation, 1 = identical)
+// edge: buying at the usual low hour and selling at the usual high hour, after tax
+// bt: the same rule replayed day by day using only earlier days (no peeking)
+function cycleModel(id, d1){
+  const byDay = {};
+  for (const b of d1){
+    if (!has(b.avgLowPrice) || !has(b.avgHighPrice)) continue;
+    const t = b.timestamp - new Date(b.timestamp * 1000).getTimezoneOffset() * 60;
+    const k = Math.floor(t / 86400), h = Math.floor((t % 86400) / 3600);
+    (byDay[k] = byDay[k] || {})[h] = b;
+  }
+  const days = Object.keys(byDay).map(Number).sort((a,b) => a-b).filter(k => Object.keys(byDay[k]).length >= 20);
+  if (days.length < 4) return null;
+  const prof = {};
+  for (const k of days){
+    const m = mean(Object.values(byDay[k]).map(b => (b.avgLowPrice + b.avgHighPrice) / 2));
+    const at = (h, f) => byDay[k][h] ? f(byDay[k][h]) : null;
+    prof[k] = {
+      lo: Array.from({length:24}, (_,h) => at(h, b => b.avgLowPrice / m)),
+      hi: Array.from({length:24}, (_,h) => at(h, b => b.avgHighPrice / m)),
+      mid: Array.from({length:24}, (_,h) => at(h, b => (b.avgLowPrice + b.avgHighPrice) / 2 / m - 1) ?? 0)
+    };
+  }
+  const corr = (a, b) => { const ma = mean(a), mb = mean(b); let n = 0, x = 0, y = 0; for (let i = 0; i < a.length; i++){ n += (a[i]-ma)*(b[i]-mb); x += (a[i]-ma)**2; y += (b[i]-mb)**2; } return x && y ? n / Math.sqrt(x*y) : 0; };
+  const avgAt = (ds, key, h) => { const v = ds.map(p => prof[p][key][h]).filter(has); return v.length ? mean(v) : null; };
+  const model = ds => {
+    const mlo = Array.from({length:24}, (_,h) => avgAt(ds, 'lo', h)), mhi = Array.from({length:24}, (_,h) => avgAt(ds, 'hi', h));
+    const cors = ds.map(p => corr(prof[p].mid, Array.from({length:24}, (_,h) => mean(ds.filter(o => o !== p).map(o => prof[o].mid[h])))));
+    let cheap = -1; for (let h = 0; h < 24; h++) if (has(mlo[h]) && (cheap < 0 || mlo[h] < mlo[cheap])) cheap = h;
+    let dear = -1, edge = -Infinity;
+    if (cheap >= 0) for (let s = 1; s < 24; s++){ const h = (cheap + s) % 24; if (!has(mhi[h])) continue; const r = (mhi[h] * 0.98 - mlo[cheap]) / mlo[cheap]; if (r > edge){ edge = r; dear = h; } }
+    return {mlo, mhi, rel: mean(cors), held: cors.filter(c => c >= 0.3).length, cheap, dear, edge};
+  };
+  const M = model(days);
+  if (M.cheap < 0 || M.dear < 0) return null;
+  const bt = {n: 0, wins: 0, sum: 0};
+  for (let t = 3; t < days.length; t++){
+    const P = model(days.slice(0, t)), k = days[t];
+    if (!(P.rel >= 0.4 && P.edge >= 0.005)) continue;
+    const bb = byDay[k][P.cheap], sb = P.dear > P.cheap ? byDay[k][P.dear] : (byDay[k+1] || {})[P.dear];
+    if (!bb || !sb) continue;
+    const r = (sb.avgHighPrice - tax(sb.avgHighPrice, id) - bb.avgLowPrice) / bb.avgLowPrice;
+    bt.n++; bt.sum += r; if (r > 0) bt.wins++;
+  }
+  bt.avg = bt.n ? bt.sum / bt.n : null;
+  return {mlo: M.mlo, mhi: M.mhi, rel: M.rel, held: M.held, nd: days.length, cheap: M.cheap, dear: M.dear, edge: M.edge, bt};
 }
 
 async function analyze(id, force){
@@ -810,11 +896,10 @@ const ICONS = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>'
 };
 function ic(name, cls){ return '<svg class="i' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>'; }
-const SIG_WORD = {BUY:'Buy', DUMP:'Dump', SELL:'Sell', FALLING:'Falling', WAIT:'Wait', THIN:'Thin'};
+const SIG_WORD = {BUY:'Buy now', SOON:'Dip ahead', DUMP:'Dump', SELL:'Sell', FALLING:'Falling', NOCYCLE:'No cycle', WAIT:'Wait', THIN:'Thin'};
 function sigTag(A){ return A ? '<span class="sig s-' + A.sig + '"><i></i>' + SIG_WORD[A.sig] + '</span>' : ''; }
 const NIL = '<span class="nil">–</span>';
 const SK = '<span class="sk"></span>';
-function hh(h){ return String(h).padStart(2,'0') + ':00'; }
 function starBtn(id){ const on = st.pins.has(id); return '<button class="icon-btn' + (on ? ' on' : '') + '" data-pin="' + id + '" aria-pressed="' + on + '" title="' + (on ? 'Unpin' : 'Pin to watchlist') + '" aria-label="' + (on ? 'Unpin' : 'Pin to watchlist') + '">' + ic('star') + '</button>'; }
 function fresh(A, mins){ return A && now() - A.t < mins*60e3; }
 
@@ -855,7 +940,7 @@ const COLS = {
 const SORT_WORDS = {profit4:'profit per 4 hours', margin:'margin', roi:'ROI', vol24:'24h volume', low:'buy price', high:'sell price', limit:'buy limit', name:'name',
   sig:'signal', floor:'floor', gap:'gap to floor', buyAt:'buy-at price', sellAt:'sell-at price', net:'target net', tprofit4:'target profit per 4 hours',
   highalch:'high alch value', alch:'profit per cast', alchLimit:'profit per buy limit'};
-const SIG_RANK = {DUMP:5, BUY:4, SELL:2, WAIT:1, FALLING:0, THIN:-1};
+const SIG_RANK = {DUMP:6, BUY:5, SOON:4, SELL:2, NOCYCLE:1, WAIT:1, FALLING:0, THIN:-1};
 function val(r, k){
   const A = st.A[r.id];
   switch(k){
@@ -954,9 +1039,10 @@ function picksList(){
     .sort((a,b) => b.profit4 - a.profit4);
 }
 function planDl(A){
+  const c = A.reliable && A.cyc;
   return '<dl class="plan">' +
-    '<div><dt>Buy at</dt><dd>' + gp(A.buyAt,1) + '</dd></div>' +
-    '<div><dt>Sell at</dt><dd>' + gp(A.sellAt,1) + '</dd></div>' +
+    '<div><dt>Buy' + (c ? ' around ' + hh(A.cyc.cheap) : ' at') + '</dt><dd>' + gp(A.buyAt,1) + '</dd></div>' +
+    '<div><dt>Sell' + (c ? ' around ' + hh(A.cyc.dear) : ' at') + '</dt><dd>' + gp(A.sellAt,1) + '</dd></div>' +
     '<div><dt>Each</dt><dd class="' + (A.net>0?'up':'down') + '">' + (A.net>0?'+':'') + gp(A.net,1) + '</dd></div></dl>';
 }
 function pickCard(A){
@@ -973,19 +1059,26 @@ function renderHero(){
   const t = $('#heroTitle'), s = $('#heroSub');
   if (picks.length){
     const best = picks[0], bm = st.map.get(best.id);
-    t.textContent = picks.length + (picks.length === 1 ? ' item is' : ' items are') + ' at a good buy price right now';
-    s.textContent = 'Best: ' + bm.name + ', about ' + gp(best.profit4) + ' profit per 4 hours. Ranked by profit per buy limit, after the 2% tax.';
+    t.textContent = picks.length + (picks.length === 1 ? ' item is in its' : ' items are in their') + ' daily dip right now';
+    s.textContent = 'Best: ' + bm.name + ', about ' + gp(best.profit4) + ' profit per 4 hours. Only items whose daily pattern held up in the past week, ranked by profit after the 2% tax.';
     $('#picks').innerHTML = picks.slice(0, 4).map(pickCard).join('');
   } else if (scanning || !st.rows.length || !scanned.length){
     t.textContent = 'Finding the best flips';
     s.textContent = st.rows.length ? 'Reading 7 days of history for the ' + S.deepN + ' most profitable items.' : 'Loading live Grand Exchange prices.';
     $('#picks').innerHTML = skPick() + skPick() + skPick() + skPick();
   } else {
-    const cheap = scanned.map(A => A.cheapHours && A.cheapHours[0]).filter(h => h != null);
-    const hr = cheap.length ? median(cheap) : null;
-    t.textContent = 'Nothing is near its floor right now';
-    s.textContent = 'All ' + scanned.length + ' scanned items are mid-range or falling.' + (hr != null ? ' Prices usually dip around ' + hh(Math.round(hr)) + ' your time.' : '');
-    $('#picks').innerHTML = '<div class="picks-empty"><h3>Check back after the next dip</h3><p>Every scan reruns automatically every 10 minutes. You can also lower the minimum volume to scan smaller markets.</p></div>';
+    const hNow = new Date().getHours();
+    const soon = scanned.filter(A => A.sig === 'SOON' && has(A.profit4) && A.profit4 > 0 && st.map.has(A.id))
+      .sort((a,b) => ((a.cyc.cheap - hNow + 24) % 24) - ((b.cyc.cheap - hNow + 24) % 24) || b.profit4 - a.profit4);
+    if (soon.length){
+      t.textContent = 'No item is in its daily dip right now, ' + soon.length + (soon.length === 1 ? ' has one' : ' have one') + ' coming up';
+      s.textContent = 'Next up: ' + st.map.get(soon[0].id).name + ' around ' + hh(soon[0].cyc.cheap) + ' your time. Only items whose daily pattern held up in the past week are listed.';
+      $('#picks').innerHTML = soon.slice(0, 4).map(pickCard).join('');
+    } else {
+      t.textContent = 'No dependable dips in the ' + scanned.length + ' items scanned';
+      s.textContent = 'None of them repeated a daily pattern big enough to beat the 2% tax this week.';
+      $('#picks').innerHTML = '<div class="picks-empty"><h3>Scan more items or check back later</h3><p>Raise "Items per scan" in Settings or lower the minimum volume to look at smaller markets. Scans rerun every 10 minutes.</p></div>';
+    }
   }
   renderCta();
 }
@@ -1009,7 +1102,7 @@ function card(id){
     '<div class="pick-top"><img loading="lazy" src="' + esc(iconUrl(m.icon)) + '" alt=""><div class="t"><h3>' + esc(m.name) + '</h3>' + sigTag(A) + '</div>' + starBtn(id) + '</div>' +
     planDl(A) +
     '<p class="why">' + esc(A.why) + '</p>' +
-    '<p class="meta">' + gp(A.profit4) + ' per 4h' + (A.cheapHours ? ' · cheapest ' + hh(A.cheapHours[0]) : '') + ' · checked ' + ago(Math.floor(A.t/1000)) + ' ago</p>' +
+    '<p class="meta">' + gp(A.profit4) + ' per 4h · checked ' + ago(Math.floor(A.t/1000)) + ' ago</p>' +
   '</article>';
 }
 function renderWatch(){
@@ -1018,9 +1111,11 @@ function renderWatch(){
   $('#pinBody').innerHTML = pins.length
     ? '<div class="cards">' + pins.sort((a,b)=>((st.A[a]&&st.A[a].gap)??9)-((st.A[b]&&st.A[b].gap)??9)).map(card).join('') + '</div>'
     : '<div class="empty-card">' + ic('star') + '<div><h3>Pin items to track them here</h3><p>Use the star on any row or card. Pinned items are rechecked every 5 minutes, and their signal tells you when to buy or list.</p></div></div>';
-  const near = Object.values(st.A).filter(A => !st.pins.has(A.id) && fresh(A, 30) && st.map.has(A.id) && (A.sig === 'BUY' || A.sig === 'DUMP') && has(A.net) && A.net > 0)
-    .sort((a,b) => (a.sig==='DUMP'?-1:0) - (b.sig==='DUMP'?-1:0) || (a.gap??9) - (b.gap??9)).slice(0, 40);
-  $('#nearTitle').textContent = near.length ? near.length + ' item' + (near.length === 1 ? ' is' : 's are') + ' near their floor now' : (Q.total ? 'Scanning for items near their floor' : 'No items near their floor right now');
+  const order = {DUMP:0, BUY:1, SOON:2};
+  const hNow = new Date().getHours();
+  const near = Object.values(st.A).filter(A => !st.pins.has(A.id) && fresh(A, 30) && st.map.has(A.id) && A.sig in order && has(A.net) && A.net > 0)
+    .sort((a,b) => order[a.sig] - order[b.sig] || (a.cyc && b.cyc ? ((a.cyc.cheap - hNow + 24) % 24) - ((b.cyc.cheap - hNow + 24) % 24) : 0) || (b.profit4||0) - (a.profit4||0)).slice(0, 40);
+  $('#nearTitle').textContent = near.length ? near.length + ' item' + (near.length === 1 ? '' : 's') + ' to buy now or later today' : (Q.total ? 'Scanning for dependable dips' : 'No dependable dips in the last scan');
   $('#nearBody').innerHTML = near.length ? '<div class="cards">' + near.map(A => card(A.id)).join('') + '</div>'
     : (Q.total ? '<div class="cards">' + skPick() + skPick() + skPick() + '</div>' : '<div class="empty-card">' + ic('scan') + '<div><h3>Nothing at a good price in the last scan</h3><p>Scan more items from the Market tab, or wait for the next automatic scan.</p></div></div>');
 }
@@ -1051,8 +1146,8 @@ function renderDrawer(){
     h += '<div class="tp-sum"><span class="sk" style="width:240px"></span></div>';
   } else {
     h += '<dl class="tp">' +
-      '<div><dt>Buy at</dt><dd>' + gp(A.buyAt,1) + '</dd><div class="note">' + (has(L.low) && A.buyAt === L.low ? 'Trading here now' : 'Reached in half of all hours') + '</div></div>' +
-      '<div><dt>Sell at</dt><dd>' + gp(A.sellAt,1) + '</dd><div class="note">' + (has(L.high) && A.sellAt === L.high ? 'Buyers paying this now' : 'Reached in half of all hours') + '</div></div>' +
+      '<div><dt>Buy at</dt><dd>' + gp(A.buyAt,1) + '</dd><div class="note">' + (A.reliable ? 'Around ' + hh(A.cyc.cheap) + ' your time' : 'Reached in half of the last 24 hours') + '</div></div>' +
+      '<div><dt>Sell at</dt><dd>' + gp(A.sellAt,1) + '</dd><div class="note">' + (A.reliable ? 'Around ' + hh(A.cyc.dear) + ' your time' : 'Reached in half of the last 24 hours') + '</div></div>' +
       '<div><dt>Profit each</dt><dd class="' + (A.net>0?'up':'down') + '">' + (A.net>0?'+':'') + gp(A.net,1) + '</dd><div class="note">ROI ' + pct(A.roi) + ' after ' + gp(tax(A.sellAt,id),1) + ' tax</div></div></dl>';
     h += '<div class="tp-sum"><span>Per 4h <b>' + gp(A.profit4,1) + '</b> on ' + (has(A.qty4) ? Math.round(A.qty4).toLocaleString('en-US') : '–') + ' items</span>' +
       '<span>Quick flip <b class="' + (A.quickNet>0?'up':'down') + '">' + gp(A.quickNet,1) + '</b> each (buy ' + gp(A.quickBuy) + ', sell ' + gp(A.quickSell) + ')</span>' +
@@ -1069,7 +1164,9 @@ function renderDrawer(){
     stat('30-day range', gp(A.low30) + ' to ' + gp(A.high30)) +
     stat('Sold per hour', vol(A.lvH), '7-day average') +
     stat('Bought per hour', vol(A.hvH), '7-day average') +
-    stat('Daily swing', A.cycle ? pctAbs(A.cycleAmp) : '–', A.cheapHours ? 'Cheapest ' + hh(A.cheapHours[0]) : '') +
+    stat('Daily pattern', A.cyc ? 'Held ' + A.cyc.held + ' of ' + A.cyc.nd + ' days' : '–', A.cyc ? 'Match score ' + A.cyc.rel.toFixed(2) + ' (0.4 needed)' : 'Not enough days') +
+    stat('Past-week test', A.cyc && A.cyc.bt.n ? A.cyc.bt.wins + ' of ' + A.cyc.bt.n + ' won' : 'No test trades', A.cyc && A.cyc.bt.n ? pct(A.cyc.bt.avg) + ' average after tax' : 'Pattern too weak to trade') +
+    stat('Daily swing', A.cycle ? pctAbs(A.cycleAmp) : '–', A.cyc ? 'Low ' + hh(A.cyc.cheap) + ', high ' + hh(A.cyc.dear) : '') +
     stat('Quick buy / sell', gp(A.quickBuy) + ' / ' + gp(A.quickSell), 'Fills in 80% of hours');
   h += '<div class="stats">' + S_ + '</div>';
   h += '<section class="d-sec"><div class="d-sec-head"><h3>Price history</h3><div class="toggles" id="cRange">' + ['24h','7d','30d'].map(x => '<button data-r="' + x + '" aria-pressed="' + (x===chartRange) + '">' + x + '</button>').join('') + '</div></div>' +
