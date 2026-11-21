@@ -502,7 +502,7 @@ const st = {
   map: new Map(),        // id -> mapping
   latest: {}, h1: {}, h24: {},
   tLatest: 0, t1h: 0, t24h: 0, err: null,
-  A: Object.fromEntries(Object.entries(LS.get('analyses', {})).filter(([k,a]) => a && a.v === 3)), // id -> analysis
+  A: Object.fromEntries(Object.entries(LS.get('analyses', {})).filter(([k,a]) => a && a.v === 4)), // id -> analysis
   pins: new Set(LS.get('pins', [])),
   rows: [], view: [],
   shown: 150,
@@ -617,7 +617,7 @@ function sustainedDay(bk){
 
 function analyzeData(id, d5, d1, d6){
   const L = st.latest[id] || {};
-  const A = {id, t: now(), v: 3};
+  const A = {id, t: now(), v: 4};
 
   // ---- sell-through from hourly extremes (24h of 5m buckets) ----
   const byHour = new Map();
@@ -830,7 +830,8 @@ function standingModel(id, d6){
   const now = lv(d.slice(-W));
   const out = {bid: Math.ceil(now.bid), ask: Math.floor(now.ask), trips, avg: trips ? sum / trips : null, total, open, holdH: holds.length ? median(holds) : null};
   out.net = out.ask - tax(out.ask, id) - out.bid;
-  out.ok = trips >= 1 && total > 0.01 && out.net > 0;
+  // at least two completed round trips, +2% overall, and not currently stuck holding
+  out.ok = trips >= 2 && total > 0.02 && !open && out.net > 0;
   return out;
 }
 
