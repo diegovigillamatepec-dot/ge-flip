@@ -141,7 +141,7 @@ main.wrap{padding-top:var(--s6);padding-bottom:var(--s7)}
 /* ---------- signal ---------- */
 .sig{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-sm);font-weight:600;white-space:nowrap}
 .sig i{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
-.s-BUY{color:var(--up)} .s-SOON{color:var(--accent)} .s-DUMP{color:var(--info)} .s-SELL{color:var(--warn)} .s-FALLING{color:var(--down)} .s-WAIT,.s-THIN,.s-NOCYCLE{color:var(--ink-3)}
+.s-BUY{color:var(--up)} .s-SOON{color:var(--accent)} .s-OFFER{color:var(--info)} .s-DUMP{color:var(--info)} .s-SELL{color:var(--warn)} .s-FALLING{color:var(--down)} .s-WAIT,.s-THIN,.s-NOCYCLE{color:var(--ink-3)}
 
 /* ---------- market table ---------- */
 .toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--s4) var(--s5);margin-bottom:var(--s4)}
@@ -326,7 +326,7 @@ details.settings summary::-webkit-details-marker{display:none}
         </div>
         <div class="grp">
           <label class="field"><span>Accounts</span><select class="select" id="fMem"><option value="all">All items</option><option value="p2p">Members</option><option value="f2p">Free-to-play</option></select></label>
-          <label class="field"><span>Signal</span><select class="select" id="fSig"><option value="">Any</option><option value="BUY">Buy now</option><option value="SOON">Dip ahead</option><option value="NEAR">Near floor</option><option value="DUMP">Dump</option><option value="SELL">Sell</option><option value="analyzed">Scanned only</option></select></label>
+          <label class="field"><span>Signal</span><select class="select" id="fSig"><option value="">Any</option><option value="BUY">Buy now</option><option value="SOON">Dip ahead</option><option value="OFFER">Set offers</option><option value="NEAR">Near floor</option><option value="DUMP">Dump</option><option value="SELL">Sell</option><option value="analyzed">Scanned only</option></select></label>
         </div>
         <div class="grp">
           <label class="field"><span>Min volume 24h</span><input class="input" type="number" id="fVol" min="0" step="100"></label>
@@ -384,20 +384,30 @@ details.settings summary::-webkit-details-marker{display:none}
         <li>The typical daily swing was 1.6%, smaller than the 2% GE tax. Many swings are just noise.</li>
         <li>Buying near the weekly floor and waiting had no edge: it lost about 1.2% per trade after tax, the same as buying at a random time.</li>
         <li>Buying at an item's usual low hour and selling at its usual high hour, only when the pattern had held on earlier days and the swing beat the tax, made about +1.3% per trade and won 62% of the time. Each trade was picked using only earlier days, so the test couldn't peek ahead.</li>
+        <li>Only a handful of items pass at any time (about 4 in 50 in the test), so each scan now checks the 150 most relevant items.</li>
       </ul>
       <p>So the signals now follow each item's own daily pattern and skip items that don't have one. One week is a small sample, so treat the numbers as a guide.</p>
+      <h2>What about leaving offers up for days?</h2>
+      <p>GE offers never expire, so a second test placed a buy offer at a low the item reached on most days of the past week and a sell offer at a high it reached on most days, then replayed that on the last 30 days for the 150 most-traded items:</p>
+      <ul>
+        <li>Round trips that completed made +2% to +5% each, but took 2 to 6 days.</li>
+        <li>About two thirds of items ended with the buy filled and the price never coming back, because a low offer fills exactly when the price is falling. Overall the method broke even, slightly below simply holding.</li>
+        <li>Items whose offers worked in the first half of the month roughly broke even in the second half, while the rest lost about 1.5% to 1.9%. Past results helped avoid losers more than they found big winners.</li>
+      </ul>
+      <p>So "Set offers" only appears for items whose own 30-day replay made money, and every item shows its offer prices and replay result in its detail panel.</p>
       <h2>How a scan reads each item</h2>
       <ul>
         <li><b>Daily pattern</b>: the last 7 days of hourly prices, grouped by hour of your day. Each day is compared with the others; a match score of 0.4 or more means the shape repeats.</li>
         <li><b>Buy at / Sell at</b>: for items with a dependable pattern, today's price level times the usual low at the cheap hour and the usual high at the peak hour. For other items, the prices reached in half of the last 24 hours.</li>
         <li><b>Target net</b>: Sell at minus tax minus Buy at.</li>
-        <li><b>Past-week test</b>: the same rule replayed on each past day using only the days before it, and how many of those trades made money.</li>
+        <li><b>Past-week test</b>: the same rule replayed on each past day using only the days before it. If those trades lost money on average, or fewer than half won, the item doesn't get a buy signal.</li>
         <li><b>Floor</b>: the lowest price the item held for about 3 hours in the last 7 days. It's shown for context and no longer triggers a buy.</li>
       </ul>
       <h2>What each signal means</h2>
       <ul>
         <li><span class="sig s-BUY"><i></i>Buy now</span> Dependable daily pattern, and it's at or near its usual low hour or already at the buy price.</li>
         <li><span class="sig s-SOON"><i></i>Dip ahead</span> Dependable pattern, but the low hour is later. The card says when.</li>
+        <li><span class="sig s-OFFER"><i></i>Set offers</span> No daily dip to time, but leaving a buy offer and a sell offer at the listed prices made money in a replay of the last 30 days.</li>
         <li><span class="sig s-SELL"><i></i>Sell</span> At its usual high hour, or the price just spiked. A good moment to list what you hold.</li>
         <li><span class="sig s-DUMP"><i></i>Dump</span> The last 15 minutes traded well under the 24h median on heavy sell volume. Often a buy, but check the news first.</li>
         <li><span class="sig s-FALLING"><i></i>Falling</span> Down more than 6% over the week, so each day's dip is lower than the last.</li>
@@ -424,7 +434,7 @@ const LS = {
   get(k, d){ try{ const v = localStorage.getItem('gfa:'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
   set(k, v){ try{ localStorage.setItem('gfa:'+k, JSON.stringify(v)); }catch(e){} }
 };
-const DEFAULTS = { share:10, deepN:50, autoDeep:true, near:3, refresh:60, theme:'' };
+const DEFAULTS = { share:10, deepN:150, autoDeep:true, near:3, refresh:60, theme:'' };
 const S = Object.assign({}, DEFAULTS, LS.get('settings', {}));
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -492,7 +502,7 @@ const st = {
   map: new Map(),        // id -> mapping
   latest: {}, h1: {}, h24: {},
   tLatest: 0, t1h: 0, t24h: 0, err: null,
-  A: Object.fromEntries(Object.entries(LS.get('analyses', {})).filter(([k,a]) => a && a.v === 2)), // id -> analysis
+  A: Object.fromEntries(Object.entries(LS.get('analyses', {})).filter(([k,a]) => a && a.v === 3)), // id -> analysis
   pins: new Set(LS.get('pins', [])),
   rows: [], view: [],
   shown: 150,
@@ -607,7 +617,7 @@ function sustainedDay(bk){
 
 function analyzeData(id, d5, d1, d6){
   const L = st.latest[id] || {};
-  const A = {id, t: now(), v: 2};
+  const A = {id, t: now(), v: 3};
 
   // ---- sell-through from hourly extremes (24h of 5m buckets) ----
   const byHour = new Map();
@@ -757,8 +767,11 @@ function analyzeData(id, d5, d1, d6){
 
   // ---- daily-cycle model (tested walk-forward on the last week) ----
   const C = cycleModel(id, d1);
+  const SO = standingModel(id, d6);
+  A.so = SO;
   A.cyc = C ? {rel: C.rel, edge: C.edge, cheap: C.cheap, dear: C.dear, held: C.held, nd: C.nd, bt: C.bt} : null;
-  A.reliable = !!(C && C.rel >= 0.4 && C.edge >= 0.005);
+  // dependable = the shape repeats, the swing beats the tax, and replaying it on past days didn't lose money
+  A.reliable = !!(C && C.rel >= 0.4 && C.edge >= 0.005 && !(C.bt.n >= 2 && (C.bt.avg <= 0 || C.bt.wins < C.bt.n / 2)));
   const hNow = new Date().getHours();
   const hd = (a, b) => Math.min((a - b + 24) % 24, (b - a + 24) % 24);
   if (A.reliable){
@@ -790,10 +803,35 @@ function analyzeData(id, d5, d1, d6){
     else { sig = 'SOON'; why = 'Buy around ' + hh(C.cheap) + ', sell around ' + hh(C.dear) + '. ' + pattern + btTxt; }
   }
   else if (A.spike) { sig = 'SELL'; why = 'Instant-buy price spiked ' + pctAbs(A.rise) + ' over the 24h median.'; }
+  else if (SO && SO.ok) { sig = 'OFFER'; why = 'Leave a buy offer at ' + gp(SO.bid, 1) + ' and a sell offer at ' + gp(SO.ask, 1) + '. Replayed on the last 30 days: ' + SO.trips + ' round trip' + (SO.trips === 1 ? '' : 's') + ' at ' + pct(SO.avg) + ' each, ' + pct(SO.total) + ' overall' + (SO.open ? ', with one offer still waiting at the end' : '') + '.'; }
   else if (C && C.rel >= 0.4) { why = 'Repeats a daily pattern, but the swing is smaller than the 2% tax. Only worth it on a live margin.'; }
   else { why = 'No dependable daily pattern: the price moved differently each day. Only worth flipping on a live margin.'; }
   A.sig = sig; A.why = why; A.near = near;
   return A;
+}
+
+// Standing offers (GE offers never expire): bid at a low the item reached on most days of the past week,
+// ask at a high it reached on most days, then replay that rule over the last 30 days of 6-hour prices.
+function standingModel(id, d6){
+  const d = d6.filter(b => has(b.avgLowPrice) && has(b.avgHighPrice));
+  const W = 28, p = 0.25;
+  if (d.length < W + 20) return null;
+  const lv = past => { const mins = [], maxs = []; for (let k = 0; k + 4 <= past.length; k += 4){ const blk = past.slice(k, k + 4); mins.push(Math.min(...blk.map(x => x.avgLowPrice))); maxs.push(Math.max(...blk.map(x => x.avgHighPrice))); }
+    const bid = quantile(mins, p); return {bid, ask: Math.max(quantile(maxs, 1 - p), Math.ceil(bid * 1.021) + 1)}; };
+  let pos = null, bid = null, set = -9, total = 0, trips = 0, sum = 0; const holds = [];
+  for (let i = W; i < d.length; i++){
+    const past = d.slice(i - W, i), b = d[i];
+    if (!pos){ if (bid === null || i - set >= 4){ bid = lv(past).bid; set = i; }
+      if (b.avgLowPrice <= bid) pos = {buy: bid, at: i, ask: lv(past).ask}; }
+    else if (b.avgHighPrice >= pos.ask){ const r = (pos.ask - tax(pos.ask, id) - pos.buy) / pos.buy; total += r; sum += r; trips++; holds.push((i - pos.at) * 6); pos = null; bid = null; }
+  }
+  let open = false;
+  if (pos){ const last = d[d.length - 1].avgHighPrice; total += (last - tax(last, id) - pos.buy) / pos.buy; open = true; }
+  const now = lv(d.slice(-W));
+  const out = {bid: Math.ceil(now.bid), ask: Math.floor(now.ask), trips, avg: trips ? sum / trips : null, total, open, holdH: holds.length ? median(holds) : null};
+  out.net = out.ask - tax(out.ask, id) - out.bid;
+  out.ok = trips >= 1 && total > 0.01 && out.net > 0;
+  return out;
 }
 
 // Daily pattern by hour of your day, from the last 7 days of hourly prices.
@@ -875,7 +913,10 @@ function pump(){
   showProgress();
 }
 function deepTop(){
-  const ids = st.view.slice(0, S.deepN).map(r => r.id).filter(id => !st.A[id] || now() - st.A[id].t > 4*60e3);
+  // half from the current ranking, the rest from the most heavily traded items (cycles show up best where volume is high)
+  const byValue = st.view.slice().sort((a,b) => (b.vol24*(b.low||0)) - (a.vol24*(a.low||0)));
+  const pick = [...new Set([...st.view.slice(0, Math.ceil(S.deepN/2)).map(r => r.id), ...byValue.map(r => r.id)])].slice(0, S.deepN);
+  const ids = pick.filter(id => !st.A[id] || now() - st.A[id].t > 4*60e3);
   enqueue(ids, false);
 }
 function deepPins(force){
@@ -896,7 +937,7 @@ const ICONS = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>'
 };
 function ic(name, cls){ return '<svg class="i' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>'; }
-const SIG_WORD = {BUY:'Buy now', SOON:'Dip ahead', DUMP:'Dump', SELL:'Sell', FALLING:'Falling', NOCYCLE:'No cycle', WAIT:'Wait', THIN:'Thin'};
+const SIG_WORD = {BUY:'Buy now', SOON:'Dip ahead', OFFER:'Set offers', DUMP:'Dump', SELL:'Sell', FALLING:'Falling', NOCYCLE:'No cycle', WAIT:'Wait', THIN:'Thin'};
 function sigTag(A){ return A ? '<span class="sig s-' + A.sig + '"><i></i>' + SIG_WORD[A.sig] + '</span>' : ''; }
 const NIL = '<span class="nil">–</span>';
 const SK = '<span class="sk"></span>';
@@ -940,7 +981,7 @@ const COLS = {
 const SORT_WORDS = {profit4:'profit per 4 hours', margin:'margin', roi:'ROI', vol24:'24h volume', low:'buy price', high:'sell price', limit:'buy limit', name:'name',
   sig:'signal', floor:'floor', gap:'gap to floor', buyAt:'buy-at price', sellAt:'sell-at price', net:'target net', tprofit4:'target profit per 4 hours',
   highalch:'high alch value', alch:'profit per cast', alchLimit:'profit per buy limit'};
-const SIG_RANK = {DUMP:6, BUY:5, SOON:4, SELL:2, NOCYCLE:1, WAIT:1, FALLING:0, THIN:-1};
+const SIG_RANK = {DUMP:6, BUY:5, SOON:4, OFFER:3, SELL:2, NOCYCLE:1, WAIT:1, FALLING:0, THIN:-1};
 function val(r, k){
   const A = st.A[r.id];
   switch(k){
@@ -1039,6 +1080,7 @@ function picksList(){
     .sort((a,b) => b.profit4 - a.profit4);
 }
 function planDl(A){
+  if (A.sig === 'OFFER' && A.so) return '<dl class="plan"><div><dt>Buy offer</dt><dd>' + gp(A.so.bid,1) + '</dd></div><div><dt>Sell offer</dt><dd>' + gp(A.so.ask,1) + '</dd></div><div><dt>Each</dt><dd class="up">+' + gp(A.so.net,1) + '</dd></div></dl>';
   const c = A.reliable && A.cyc;
   return '<dl class="plan">' +
     '<div><dt>Buy' + (c ? ' around ' + hh(A.cyc.cheap) : ' at') + '</dt><dd>' + gp(A.buyAt,1) + '</dd></div>' +
@@ -1049,7 +1091,7 @@ function pickCard(A){
   const m = st.map.get(A.id);
   return '<article class="pick" data-id="' + A.id + '">' +
     '<div class="pick-top"><img src="' + esc(iconUrl(m.icon)) + '" alt=""><div class="t"><h3>' + esc(m.name) + '</h3>' + sigTag(A) + '</div>' + starBtn(A.id) + '</div>' +
-    '<div class="pick-metric"><b>' + gp(A.profit4) + '</b><span>profit per 4h</span></div>' +
+    '<div class="pick-metric"><b>' + gp(A.profit4) + '</b><span>' + (A.sig === 'OFFER' ? 'per filled buy limit' : 'profit per 4h') + '</span></div>' +
     planDl(A) +
     '<p class="why">' + esc(A.why) + '</p></article>';
 }
@@ -1074,6 +1116,11 @@ function renderHero(){
       t.textContent = 'No item is in its daily dip right now, ' + soon.length + (soon.length === 1 ? ' has one' : ' have one') + ' coming up';
       s.textContent = 'Next up: ' + st.map.get(soon[0].id).name + ' around ' + hh(soon[0].cyc.cheap) + ' your time. Only items whose daily pattern held up in the past week are listed.';
       $('#picks').innerHTML = soon.slice(0, 4).map(pickCard).join('');
+    } else if (scanned.some(A => A.sig === 'OFFER')){
+      const offers = scanned.filter(A => A.sig === 'OFFER' && st.map.has(A.id)).sort((a,b) => b.so.total - a.so.total);
+      t.textContent = 'No dips right now, ' + offers.length + ' item' + (offers.length === 1 ? ' is' : 's are') + ' worth a standing offer';
+      s.textContent = 'GE offers never expire. These items filled and sold at these levels in a replay of the last 30 days.';
+      $('#picks').innerHTML = offers.slice(0, 4).map(A => pickCard(Object.assign({}, A, {profit4: A.so.net * (st.map.get(A.id).limit || 1)}))).join('');
     } else {
       t.textContent = 'No dependable dips in the ' + scanned.length + ' items scanned';
       s.textContent = 'None of them repeated a daily pattern big enough to beat the 2% tax this week.';
@@ -1111,7 +1158,7 @@ function renderWatch(){
   $('#pinBody').innerHTML = pins.length
     ? '<div class="cards">' + pins.sort((a,b)=>((st.A[a]&&st.A[a].gap)??9)-((st.A[b]&&st.A[b].gap)??9)).map(card).join('') + '</div>'
     : '<div class="empty-card">' + ic('star') + '<div><h3>Pin items to track them here</h3><p>Use the star on any row or card. Pinned items are rechecked every 5 minutes, and their signal tells you when to buy or list.</p></div></div>';
-  const order = {DUMP:0, BUY:1, SOON:2};
+  const order = {DUMP:0, BUY:1, SOON:2, OFFER:3};
   const hNow = new Date().getHours();
   const near = Object.values(st.A).filter(A => !st.pins.has(A.id) && fresh(A, 30) && st.map.has(A.id) && A.sig in order && has(A.net) && A.net > 0)
     .sort((a,b) => order[a.sig] - order[b.sig] || (a.cyc && b.cyc ? ((a.cyc.cheap - hNow + 24) % 24) - ((b.cyc.cheap - hNow + 24) % 24) : 0) || (b.profit4||0) - (a.profit4||0)).slice(0, 40);
@@ -1152,6 +1199,16 @@ function renderDrawer(){
     h += '<div class="tp-sum"><span>Per 4h <b>' + gp(A.profit4,1) + '</b> on ' + (has(A.qty4) ? Math.round(A.qty4).toLocaleString('en-US') : '–') + ' items</span>' +
       '<span>Quick flip <b class="' + (A.quickNet>0?'up':'down') + '">' + gp(A.quickNet,1) + '</b> each (buy ' + gp(A.quickBuy) + ', sell ' + gp(A.quickSell) + ')</span>' +
       '<span>Live margin <b>' + gp(r.margin,1) + '</b>' + (r.outHigh || r.outLow ? ' (one-off trade ignored)' : '') + '</span></div>';
+  }
+  if (!loading && A.so){
+    const o = A.so;
+    h += '<section class="d-sec" style="margin-top:0;margin-bottom:var(--s6)"><div class="d-sec-head"><h3>Standing offers, no time limit</h3></div>' +
+      '<dl class="tp"><div><dt>Buy offer</dt><dd>' + gp(o.bid,1) + '</dd><div class="note">A low it hit on most days this week</div></div>' +
+      '<div><dt>Sell offer</dt><dd>' + gp(o.ask,1) + '</dd><div class="note">A high it hit on most days this week</div></div>' +
+      '<div><dt>Profit each</dt><dd class="' + (o.net>0?'up':'down') + '">' + (o.net>0?'+':'') + gp(o.net,1) + '</dd><div class="note">After ' + gp(tax(o.ask,id),1) + ' tax</div></div></dl>' +
+      '<div class="tp-sum"><span>30-day replay <b class="' + (o.total>0?'up':'down') + '">' + pct(o.total) + '</b></span><span><b>' + o.trips + '</b> round trip' + (o.trips===1?'':'s') + (o.trips ? ' at <b>' + pct(o.avg) + '</b> each' : '') + '</span>' +
+      (o.holdH ? '<span>Typical wait <b>' + (o.holdH >= 48 ? Math.round(o.holdH/24) + ' days' : Math.round(o.holdH) + ' hours') + '</b></span>' : '') +
+      (o.open ? '<span>Ended with a buy filled and the sell still waiting</span>' : '') + '</div></section>';
   }
   const S_ = loading ? Array.from({length:8}, () => stat('<span class="sk" style="width:60%"></span>', '<span class="sk md" style="width:80%;margin-top:6px"></span>')).join('') :
     stat('Instant-sell now', gp(L.low,1), ago(L.lowTime) + ' ago') +
