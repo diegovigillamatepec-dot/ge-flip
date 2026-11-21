@@ -1,0 +1,1279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GE Flip Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   Design tokens
+   spacing 4·8·12·16·24·32·48 · radius 16/12/8/4
+   nested radius = outer radius − padding
+   ========================================================= */
+:root{
+  color-scheme:light;
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+  --r1:16px; --r2:12px; --r3:8px; --r4:4px;
+  --fs-xs:12px; --fs-sm:13px; --fs-md:14px; --fs-lg:16px; --fs-xl:20px; --fs-2xl:26px; --fs-3xl:34px;
+  --bg:#f6f5f1; --panel:#ffffff; --panel-2:#f0eee9; --line:#e2dfd7; --line-2:#cfccc2;
+  --ink:#141412; --ink-2:#3f3d38; --ink-3:#5f5d55;
+  --accent:#a35d00; --accent-ink:#ffffff; --accent-soft:#fbefdc;
+  --up:#0b7a3b; --down:#b8322a; --warn:#8a5600; --info:#1d5bb8;
+  --s-low:#2a78d6; --s-high:#eb6834; --vol:#c9c6bc;
+  --div-neg:#2a78d6; --div-pos:#e34948;
+  --scrim:rgba(20,20,18,.32);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0e0e0d; --panel:#171715; --panel-2:#20201d; --line:#2c2b28; --line-2:#3a3935;
+    --ink:#f3f2ee; --ink-2:#cfcdc5; --ink-3:#a3a198;
+    --accent:#ffb224; --accent-ink:#1c1300; --accent-soft:#33260c;
+    --up:#3ed68c; --down:#ff6b5e; --warn:#f5c04a; --info:#7ab0ff;
+    --s-low:#3987e5; --s-high:#d95926; --vol:#45443f;
+    --div-neg:#3987e5; --div-pos:#e66767;
+    --scrim:rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0e0e0d; --panel:#171715; --panel-2:#20201d; --line:#2c2b28; --line-2:#3a3935;
+  --ink:#f3f2ee; --ink-2:#cfcdc5; --ink-3:#a3a198;
+  --accent:#ffb224; --accent-ink:#1c1300; --accent-soft:#33260c;
+  --up:#3ed68c; --down:#ff6b5e; --warn:#f5c04a; --info:#7ab0ff;
+  --s-low:#3987e5; --s-high:#d95926; --vol:#45443f;
+  --div-neg:#3987e5; --div-pos:#e66767;
+  --scrim:rgba(0,0,0,.5);
+}
+
+/* ---------- base ---------- */
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:400 var(--fs-md)/1.5 var(--font);font-variant-numeric:tabular-nums;font-feature-settings:"tnum","cv11";-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit;font-variant-numeric:tabular-nums}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em;text-wrap:balance}
+p{margin:0;text-wrap:pretty}
+a{color:var(--info);text-underline-offset:2px}
+svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+svg.i.sm{width:16px;height:16px}
+.wrap{max-width:1440px;margin:0 auto;padding:0 var(--s5)}
+.up{color:var(--up)} .down{color:var(--down)} .muted{color:var(--ink-3)}
+.nil{color:var(--ink-3)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- controls ---------- */
+.btn{display:inline-flex;align-items:center;gap:var(--s2);height:36px;padding:0 var(--s4);border:1px solid var(--line-2);background:var(--panel);border-radius:var(--r3);cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{background:var(--panel-2)}
+.btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);height:44px;padding:0 var(--s5);border:0;border-radius:var(--r3);background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:var(--fs-md);cursor:pointer;white-space:nowrap;min-width:208px}
+.btn-primary:hover{filter:brightness(1.06)}
+.btn-primary[aria-busy="true"]{cursor:progress}
+.icon-btn{display:inline-grid;place-items:center;width:36px;height:36px;border:0;background:none;border-radius:var(--r3);color:var(--ink-2);cursor:pointer}
+.icon-btn:hover{background:var(--panel-2);color:var(--ink)}
+.icon-btn.on{color:var(--accent)}
+.icon-btn.on svg{fill:currentColor}
+.field{display:flex;flex-direction:column;gap:var(--s1)}
+.field span{font-size:var(--fs-xs);color:var(--ink-3);font-weight:500}
+.input,.select{height:36px;border:1px solid var(--line-2);background:var(--panel);border-radius:var(--r3);padding:0 var(--s3);min-width:0}
+.input:focus,.select:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.search{position:relative;display:flex;align-items:center}
+.search svg{position:absolute;left:var(--s3);color:var(--ink-3);pointer-events:none}
+.search .input{padding-left:36px;width:260px}
+.check{display:inline-flex;align-items:center;gap:var(--s2);font-size:var(--fs-sm);color:var(--ink-2);cursor:pointer;height:36px}
+.check input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+/* underline toggles (used for nav and view switches) */
+.toggles{display:flex;gap:var(--s5);align-items:stretch}
+.toggles button{border:0;background:none;padding:0;height:100%;min-height:36px;color:var(--ink-3);font-weight:500;cursor:pointer;box-shadow:inset 0 -2px 0 transparent}
+.toggles button:hover{color:var(--ink)}
+.toggles button[aria-pressed="true"],.toggles button[aria-selected="true"]{color:var(--ink);box-shadow:inset 0 -2px 0 var(--accent)}
+
+/* ---------- loading ---------- */
+.spin{width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:rot .7s linear infinite;flex:none}
+@keyframes rot{to{transform:rotate(360deg)}}
+.sk{display:block;height:12px;border-radius:var(--r4);background:linear-gradient(90deg,var(--panel-2) 25%,var(--line) 50%,var(--panel-2) 75%);background-size:300% 100%;animation:sh 1.4s ease-in-out infinite}
+.sk.lg{height:28px} .sk.md{height:16px}
+@keyframes sh{0%{background-position:100% 0}100%{background-position:0 0}}
+@media (prefers-reduced-motion: reduce){.sk,.spin{animation:none}}
+
+/* ---------- header ---------- */
+header.top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:var(--s6);height:60px}
+.brand{display:flex;align-items:baseline;gap:var(--s2);font-weight:700;font-size:var(--fs-lg);letter-spacing:-.01em;white-space:nowrap}
+.brand small{font-weight:500;font-size:var(--fs-xs);color:var(--ink-3);letter-spacing:0}
+header.top nav{align-self:stretch}
+header.top nav button{height:60px;font-size:var(--fs-md)}
+.live{margin-left:auto;display:flex;align-items:center;gap:var(--s2);font-size:var(--fs-sm);color:var(--ink-2);white-space:nowrap}
+.live .dot{width:8px;height:8px;border-radius:50%;background:var(--up)}
+.live .dot.err{background:var(--down)}
+.hactions{display:flex;gap:var(--s1)}
+
+/* ---------- page ---------- */
+main.wrap{padding-top:var(--s6);padding-bottom:var(--s7)}
+.section{margin-bottom:var(--s7)}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s5);margin-bottom:var(--s5);flex-wrap:wrap}
+.section-head h1{font-size:var(--fs-3xl);line-height:1.15;max-width:26ch}
+.section-head h2{font-size:var(--fs-2xl);line-height:1.2}
+.section-head p{margin-top:var(--s2);color:var(--ink-2);font-size:var(--fs-lg);max-width:60ch}
+.cta{display:flex;flex-direction:column;align-items:flex-end;gap:var(--s2)}
+.cta small{font-size:var(--fs-xs);color:var(--ink-3)}
+
+/* ---------- pick cards (main feature) ---------- */
+.picks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s4)}
+.pick{background:var(--panel);border:1px solid var(--line);border-radius:var(--r1);padding:var(--s5);display:flex;flex-direction:column;gap:var(--s4);cursor:pointer;min-width:0}
+.pick:hover{border-color:var(--line-2)}
+.pick-top{display:flex;align-items:center;gap:var(--s3);min-width:0}
+.pick-top img{width:36px;height:36px;object-fit:contain;flex:none}
+.pick-top .t{min-width:0;flex:1}
+.pick-top h3{font-size:var(--fs-lg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick-metric{display:flex;align-items:baseline;gap:var(--s2);flex-wrap:wrap}
+.pick-metric b{font-size:var(--fs-3xl);font-weight:700;letter-spacing:-.02em;line-height:1}
+.pick-metric span{color:var(--ink-3);font-size:var(--fs-sm)}
+.plan{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s3);margin:0;padding-top:var(--s4);border-top:1px solid var(--line)}
+.plan dt{font-size:var(--fs-xs);color:var(--ink-3);font-weight:500}
+.plan dd{margin:0;font-weight:600;font-size:var(--fs-md);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick .why{font-size:var(--fs-sm);color:var(--ink-2)}
+.picks-empty{grid-column:1/-1;background:var(--panel);border:1px solid var(--line);border-radius:var(--r1);padding:var(--s6);color:var(--ink-2)}
+.picks-empty h3{font-size:var(--fs-xl);color:var(--ink);margin-bottom:var(--s2)}
+
+/* ---------- signal ---------- */
+.sig{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-sm);font-weight:600;white-space:nowrap}
+.sig i{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.s-BUY{color:var(--up)} .s-DUMP{color:var(--info)} .s-SELL{color:var(--warn)} .s-FALLING{color:var(--down)} .s-WAIT,.s-THIN{color:var(--ink-3)}
+
+/* ---------- market table ---------- */
+.toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--s4) var(--s5);margin-bottom:var(--s4)}
+.toolbar .grp{display:flex;align-items:flex-end;gap:var(--s3)}
+.toolbar .field .input{width:120px}
+.toolbar .spacer{flex:1}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r1);overflow:hidden}
+.tablewrap{overflow:auto;max-height:calc(100vh - 140px)}
+table{border-collapse:separate;border-spacing:0;width:100%;min-width:1240px}
+th,td{padding:0 var(--s4);height:52px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{position:sticky;top:0;z-index:1;height:44px;background:var(--panel);font-size:var(--fs-xs);font-weight:600;color:var(--ink-3);cursor:pointer;user-select:none}
+th:hover{color:var(--ink)}
+th[aria-sort] {color:var(--ink)}
+th .arr{display:inline-block;margin-left:var(--s1);color:var(--accent)}
+th.l,td.l{text-align:left}
+th.sep,td.sep{border-left:1px solid var(--line)}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--panel-2)}
+tbody tr:last-child td{border-bottom:0}
+td .stale{display:block;font-size:var(--fs-xs);color:var(--warn);line-height:1.2}
+td .flag{display:inline-flex;vertical-align:-3px;margin-right:var(--s1);color:var(--warn)}
+td.pin{width:52px;padding-right:0}
+.item{display:flex;align-items:center;gap:var(--s3);max-width:280px}
+.item img{width:28px;height:28px;object-fit:contain;flex:none}
+.item span{overflow:hidden;text-overflow:ellipsis;font-weight:500}
+td .sk{width:56px;margin-left:auto}
+.tfoot{display:flex;justify-content:center;align-items:center;gap:var(--s3);padding:var(--s4);border-top:1px solid var(--line);color:var(--ink-3);font-size:var(--fs-sm)}
+.empty{padding:var(--s7) var(--s5);text-align:center;color:var(--ink-2)}
+
+/* ---------- watchlist ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:var(--s4)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r1);padding:var(--s4);display:flex;flex-direction:column;gap:var(--s3);cursor:pointer;min-width:0}
+.card:hover{border-color:var(--line-2)}
+.card .pick-top img{width:32px;height:32px}
+.card .plan{padding-top:var(--s3)}
+.card .why{font-size:var(--fs-sm);color:var(--ink-2)}
+.card .meta{font-size:var(--fs-xs);color:var(--ink-3)}
+.empty-card{background:var(--panel);border:1px dashed var(--line-2);border-radius:var(--r1);padding:var(--s6);color:var(--ink-2);display:flex;gap:var(--s4);align-items:flex-start}
+.empty-card svg{color:var(--accent);margin-top:2px}
+.empty-card h3{font-size:var(--fs-lg);color:var(--ink);margin-bottom:var(--s1)}
+
+/* ---------- drawer ---------- */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:40;opacity:0;pointer-events:none;transition:opacity .18s}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(760px,100vw);background:var(--bg);border-left:1px solid var(--line);z-index:41;transform:translateX(100%);transition:transform .2s ease;overflow-y:auto}
+.open .scrim{opacity:1;pointer-events:auto} .open .drawer{transform:none}
+.d-in{padding:var(--s5)}
+.d-head{display:flex;align-items:center;gap:var(--s3)}
+.d-head img{width:44px;height:44px;object-fit:contain}
+.d-head .t{flex:1;min-width:0}
+.d-head h2{font-size:var(--fs-2xl);line-height:1.2}
+.d-head .sub{font-size:var(--fs-sm);color:var(--ink-3);margin-top:2px}
+.d-why{margin:var(--s4) 0 var(--s5);color:var(--ink-2);font-size:var(--fs-md)}
+/* trade plan: outer r1 16 / pad 4 -> inner r 12 */
+.tp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s1);padding:var(--s1);background:var(--panel-2);border-radius:var(--r1)}
+.tp > div{background:var(--panel);border-radius:var(--r2);padding:var(--s4)}
+.tp dt{font-size:var(--fs-xs);color:var(--ink-3);font-weight:500}
+.tp dd{margin:var(--s1) 0 0;font-size:var(--fs-2xl);font-weight:700;letter-spacing:-.01em}
+.tp .note{font-size:var(--fs-xs);color:var(--ink-3);margin-top:var(--s1)}
+.tp-sum{display:flex;gap:var(--s5);flex-wrap:wrap;margin:var(--s3) 0 var(--s6);font-size:var(--fs-sm);color:var(--ink-2)}
+.tp-sum b{color:var(--ink)}
+/* stats: outer r1 16 / pad 4 -> inner 12 */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s1);padding:var(--s1);background:var(--panel-2);border-radius:var(--r1)}
+.stat{background:var(--panel);border-radius:var(--r2);padding:var(--s3) var(--s4);min-width:0}
+.stat .k{font-size:var(--fs-xs);color:var(--ink-3);font-weight:500}
+.stat .v{font-size:var(--fs-lg);font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .s{font-size:var(--fs-xs);color:var(--ink-3)}
+.d-sec{margin-top:var(--s6)}
+.d-sec-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s4);margin-bottom:var(--s3)}
+.d-sec-head h3{font-size:var(--fs-lg)}
+.d-sec-head .toggles{gap:var(--s4)}
+.d-sec-head .toggles button{min-height:32px;font-size:var(--fs-sm)}
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:var(--r1);padding:var(--s4);position:relative}
+.legend{display:flex;gap:var(--s4);font-size:var(--fs-xs);color:var(--ink-2);margin-bottom:var(--s2);flex-wrap:wrap}
+.legend i{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:6px;border-radius:1px}
+.legend i.sq{width:10px;height:10px;border-radius:2px}
+svg text{fill:var(--ink-3);font-size:11px;font-family:var(--font)}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line-2);border-radius:var(--r3);padding:var(--s2) var(--s3);font-size:var(--fs-xs);display:none;z-index:5;min-width:160px}
+.tip b{display:block;margin-bottom:2px}
+.tip div{display:flex;justify-content:space-between;gap:var(--s3);color:var(--ink-2)}
+
+/* ---------- settings popover ---------- */
+details.settings{position:relative}
+details.settings summary{list-style:none}
+details.settings summary::-webkit-details-marker{display:none}
+.pop{position:absolute;right:0;top:44px;background:var(--panel);border:1px solid var(--line-2);border-radius:var(--r2);padding:var(--s4);width:320px;z-index:30;display:flex;flex-direction:column;gap:var(--s3)}
+.pop h3{font-size:var(--fs-md)}
+.pop label{display:flex;justify-content:space-between;align-items:center;gap:var(--s3);font-size:var(--fs-sm);color:var(--ink-2)}
+.pop .input,.pop .select{width:96px;height:32px}
+.pop p{font-size:var(--fs-xs);color:var(--ink-3)}
+
+/* ---------- guide ---------- */
+.guide{max-width:72ch}
+.guide h2{font-size:var(--fs-xl);margin:var(--s6) 0 var(--s3)}
+.guide h2:first-child{margin-top:0}
+.guide p,.guide li{color:var(--ink-2);font-size:var(--fs-lg);line-height:1.6}
+.guide ul{padding-left:var(--s5);margin:0;display:flex;flex-direction:column;gap:var(--s2)}
+.guide b{color:var(--ink);font-weight:600}
+
+.err{color:var(--down);font-size:var(--fs-sm)}
+
+/* ---------- responsive ---------- */
+@media (max-width:1180px){ .picks{grid-template-columns:repeat(2,minmax(0,1fr))} .stats{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media (max-width:720px){
+  .wrap{padding:0 var(--s4)}
+  header.top .wrap{gap:var(--s4);height:auto;flex-wrap:wrap;padding-top:var(--s3)}
+  header.top nav{order:3;width:100%}
+  header.top nav button{height:44px}
+  .live .txt{display:none}
+  main.wrap{padding-top:var(--s5)}
+  .toolbar .grp{flex-wrap:wrap;width:100%}
+  .toolbar .field{flex:1 1 calc(50% - 6px)}
+  .toolbar .field .input,.toolbar .field .select{width:100%}
+  .section-head h1{font-size:var(--fs-2xl)}
+  .cta{align-items:stretch;width:100%}
+  .btn-primary{width:100%}
+  .picks{grid-template-columns:1fr}
+  .search .input{width:100%}
+  .search{flex:1 1 100%}
+  .tp{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tablewrap{max-height:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">GE Flip Analyzer <small>OSRS</small></div>
+    <nav class="toggles" role="tablist" id="tabs">
+      <button role="tab" data-tab="market" aria-selected="true">Market</button>
+      <button role="tab" data-tab="watch" aria-selected="false">Watchlist</button>
+      <button role="tab" data-tab="guide" aria-selected="false">How it works</button>
+    </nav>
+    <div class="live" id="live"><span class="spin"></span><span class="txt">Connecting to the Wiki</span></div>
+    <div class="hactions">
+      <button class="icon-btn" id="btnRefresh" title="Refresh prices now" aria-label="Refresh prices now"></button>
+      <details class="settings" id="settings">
+        <summary class="icon-btn" title="Settings" aria-label="Settings"></summary>
+        <div class="pop">
+          <h3>Settings</h3>
+          <label>Your share of volume (%) <input class="input" type="number" id="setShare" min="1" max="100" step="1"></label>
+          <label>Items per scan <input class="input" type="number" id="setDeepN" min="10" max="200" step="10"></label>
+          <label>Rescan every 10 min <input type="checkbox" id="setAutoDeep" class="check"></label>
+          <label>Near floor within (%) <input class="input" type="number" id="setNear" min="0.5" max="15" step="0.5"></label>
+          <label>Price refresh (s) <input class="input" type="number" id="setRefresh" min="30" max="600" step="10"></label>
+          <label>Theme <select class="select" id="setTheme"><option value="">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+          <p>Prices from the OSRS Wiki real-time API. Pins and settings stay in this browser.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="tab-market">
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h1 id="heroTitle">Finding the best flips</h1>
+          <p id="heroSub">Ranked by profit per 4-hour buy limit, after the 2% GE tax.</p>
+        </div>
+        <div class="cta">
+          <button class="btn-primary" id="btnDeep"></button>
+          <small id="ctaNote">Checks 7 days of history for the top items</small>
+        </div>
+      </div>
+      <div class="picks" id="picks"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2 id="mktTitle">Every tradeable item</h2>
+          <p id="mktSub">Live instant-buy and instant-sell prices, refreshed every minute.</p>
+        </div>
+      </div>
+      <div class="toolbar">
+        <label class="search"><span id="icSearch"></span><input class="input" type="search" id="fQ" placeholder="Search items" autocomplete="off" aria-label="Search items"></label>
+        <div class="toggles" id="fView" aria-label="View">
+          <button data-v="flip" aria-pressed="true">Flips</button>
+          <button data-v="alch" aria-pressed="false">High alch</button>
+        </div>
+        <div class="grp">
+          <label class="field"><span>Accounts</span><select class="select" id="fMem"><option value="all">All items</option><option value="p2p">Members</option><option value="f2p">Free-to-play</option></select></label>
+          <label class="field"><span>Signal</span><select class="select" id="fSig"><option value="">Any</option><option value="BUY">Buy</option><option value="NEAR">Near floor</option><option value="DUMP">Dump</option><option value="SELL">Sell</option><option value="analyzed">Scanned only</option></select></label>
+        </div>
+        <div class="grp">
+          <label class="field"><span>Min volume 24h</span><input class="input" type="number" id="fVol" min="0" step="100"></label>
+          <label class="field"><span>Min price</span><input class="input" type="number" id="fMin" min="0" step="1000" placeholder="0"></label>
+          <label class="field"><span>Max price</span><input class="input" type="number" id="fMax" min="0" step="1000" placeholder="Any"></label>
+          <label class="field"><span>Min ROI %</span><input class="input" type="number" id="fRoi" step="0.5" placeholder="Any"></label>
+        </div>
+        <label class="check"><input type="checkbox" id="fStale"> Hide items not traded in 1h</label>
+      </div>
+      <div class="panel">
+        <div class="tablewrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+        <div class="tfoot" id="more"></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="tab-watch" hidden>
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h1 id="pinTitle">Your pinned items</h1>
+          <p>Rechecked every 5 minutes, sorted by distance to their floor.</p>
+        </div>
+        <div class="cta"><button class="btn-primary" id="btnWatchRefresh"></button></div>
+      </div>
+      <div id="pinBody"></div>
+    </section>
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2 id="nearTitle">Near their floor now</h2>
+          <p>Scanned in the last 30 minutes, at or near their floor or dumping, with profit left after tax.</p>
+        </div>
+      </div>
+      <div id="nearBody"></div>
+    </section>
+  </div>
+
+  <div id="tab-guide" hidden>
+    <article class="guide">
+      <h2>Where the prices come from</h2>
+      <p>Live Grand Exchange trades from the OSRS Wiki real-time API, which has used Jagex data covering every game client since 30 September 2026. Prices refresh every minute. You place every offer yourself; nothing here touches the game.</p>
+      <h2>How the live margin is worked out</h2>
+      <ul>
+        <li><b>Buy</b> is the latest instant-sell price. A buy offer around it gets filled by people selling fast.</li>
+        <li><b>Sell</b> is the latest instant-buy price. A sell offer around it gets filled by people buying fast.</li>
+        <li><b>Margin</b> is Sell minus Buy minus the GE tax: 2% of the sell price, rounded down and capped at 5M per item. Items under 50 gp and the Wiki's exempt list pay nothing.</li>
+        <li>A warning icon marks a one-off trade far from the last hour's average. The margin uses the average instead, so a fat-finger trade can't top the list.</li>
+        <li><b>Profit / 4h</b> is the margin times what you can move in one buy-limit window: the buy limit, or your share of the 4-hour volume if that's lower.</li>
+      </ul>
+      <h2>How a scan reads the cycle</h2>
+      <ul>
+        <li><b>Floor</b> is the lowest instant-sell price the item held for about 3 hours on any of the last 7 days. One-off dumps don't count. After a clear move into a higher range, only the new range counts.</li>
+        <li><b>Buy at</b> is the price the item dipped to in at least half of the last 24 hours. <b>Sell at</b> is the price buyers paid in at least half of them. If the live price is already better, the live price is used.</li>
+        <li><b>Target net</b> is Sell at minus tax minus Buy at: the margin you get by waiting for the cycle instead of flipping instantly.</li>
+        <li><b>Gap</b> is how far today's instant-sell price sits above the floor. Negative means under it.</li>
+        <li>The <b>daily cycle</b> chart averages the price by hour of your day over 7 days, so you can see when an item is usually cheapest.</li>
+      </ul>
+      <h2>What each signal means</h2>
+      <ul>
+        <li><span class="sig s-BUY"><i></i>Buy</span> In the bottom quarter of its daily range or near its floor, with profit left after tax.</li>
+        <li><span class="sig s-DUMP"><i></i>Dump</span> The last 15 minutes traded well under the 24h median on heavy sell volume. Often a buy, but check the news first.</li>
+        <li><span class="sig s-SELL"><i></i>Sell</span> In the top quarter of its range or spiking. A good moment to list what you hold.</li>
+        <li><span class="sig s-FALLING"><i></i>Falling</span> Near the bottom, but down more than 6% over 7 days, or broke under its floor while trading 3% below yesterday. The floor may not hold.</li>
+        <li><span class="sig s-WAIT"><i></i>Wait</span> Mid-range. <span class="sig s-THIN"><i></i>Thin</span> Too few trades to read a cycle.</li>
+      </ul>
+      <h2>Things to keep in mind</h2>
+      <ul>
+        <li>Buy limits reset 4 hours after your first purchase of that item.</li>
+        <li>Game updates, usually on Wednesdays, and new content break normal cycles.</li>
+        <li>Requests are paced and cached: one bulk price call per refresh, plus history only for the items a scan covers.</li>
+      </ul>
+    </article>
+  </div>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Item detail"></aside>
+
+<script>
+'use strict';
+/* ========================= config & utils ========================= */
+const API = 'https://prices.runescape.wiki/api/v2/osrs';
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem('gfa:'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('gfa:'+k, JSON.stringify(v)); }catch(e){} }
+};
+const DEFAULTS = { share:10, deepN:50, autoDeep:true, near:3, refresh:60, theme:'' };
+const S = Object.assign({}, DEFAULTS, LS.get('settings', {}));
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const now = () => Date.now();
+const nowS = () => Math.floor(Date.now()/1000);
+
+function gp(n, exact){
+  if (n == null || !isFinite(n)) return '–';
+  const a = Math.abs(n), s = n < 0 ? '-' : '';
+  if (exact || a < 100000) return s + Math.round(a).toLocaleString('en-US');
+  if (a >= 1e9) return s + (a/1e9).toFixed(a >= 1e10 ? 1 : 2) + 'B';
+  if (a >= 1e7) return s + (a/1e6).toFixed(1) + 'M';
+  if (a >= 1e6) return s + (a/1e6).toFixed(2) + 'M';
+  return s + (a/1e3).toFixed(a >= 1e6 ? 0 : 1) + 'K';
+}
+function pct(x, d=1){ if (x == null || !isFinite(x)) return '–'; const s = (x*100).toFixed(d); if (+s === 0) return (0).toFixed(d) + '%'; return (x>0?'+':'') + s + '%'; }
+function pctAbs(x, d=1){ if (x == null || !isFinite(x)) return '–'; return (x*100).toFixed(d) + '%'; }
+function vol(n){ if (n == null || !isFinite(n)) return '–'; if (n >= 1e6) return (n/1e6).toFixed(1)+'M'; if (n >= 1e4) return Math.round(n/1e3)+'K'; return Math.round(n).toLocaleString('en-US'); }
+function ago(ts){ if (!ts) return ''; const s = nowS() - ts; if (s < 60) return s+'s'; if (s < 3600) return Math.floor(s/60)+'m'; if (s < 86400) return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }
+function quantile(arr, q){
+  if (!arr.length) return null;
+  const a = arr.slice().sort((x,y)=>x-y);
+  const p = (a.length-1)*q, lo = Math.floor(p), hi = Math.ceil(p);
+  return a[lo] + (a[hi]-a[lo])*(p-lo);
+}
+const median = a => quantile(a, .5);
+const mean = a => a.length ? a.reduce((s,x)=>s+x,0)/a.length : null;
+function iconUrl(icon){ return icon ? 'https://oldschool.runescape.wiki/images/' + encodeURIComponent(icon.replace(/ /g,'_')) : ''; }
+
+/* ========================= GE tax ========================= */
+const EXEMPT_NAMES = ['Old school bond','Energy potion(1)','Energy potion(2)','Energy potion(3)','Energy potion(4)',
+  'Bronze arrow','Bronze dart','Iron arrow','Iron dart','Mind rune','Steel arrow','Steel dart',
+  'Bass','Bread','Cake','Cooked chicken','Cooked meat','Herring','Lobster','Mackerel','Meat pie','Pike','Salmon','Shrimps','Tuna',
+  'Ardougne teleport','Camelot teleport','Civitas illa fortis teleport','Falador teleport','Games necklace(8)','Kourend castle teleport',
+  'Lumbridge teleport','Ring of dueling(8)','Teleport to house','Varrock teleport',
+  'Chisel','Gardening trowel','Glassblowing pipe','Hammer','Needle','Pestle and mortar','Rake','Saw','Secateurs','Seed dibber','Shears','Spade','Watering can'];
+const EXEMPT = new Set();
+function tax(price, id){
+  if (price == null || EXEMPT.has(id)) return 0;
+  return Math.min(Math.floor(price * 0.02), 5000000);
+}
+
+/* ========================= network ========================= */
+let lastReq = 0;
+async function api(path, tries=2){
+  const wait = Math.max(0, lastReq + 100 - now()); lastReq = now() + wait;
+  if (wait) await new Promise(r => setTimeout(r, wait));
+  for (let i = 0; i < tries; i++){
+    try{
+      const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 20000);
+      const r = await fetch(API + path, {signal: ctl.signal, cache:'no-store'});
+      clearTimeout(t);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    }catch(e){
+      if (i === tries-1) throw e;
+      await new Promise(r => setTimeout(r, 800 * (i+1)));
+    }
+  }
+}
+
+/* ========================= state ========================= */
+const st = {
+  map: new Map(),        // id -> mapping
+  latest: {}, h1: {}, h24: {},
+  tLatest: 0, t1h: 0, t24h: 0, err: null,
+  A: LS.get('analyses', {}), // id -> analysis
+  pins: new Set(LS.get('pins', [])),
+  rows: [], view: [],
+  shown: 150,
+  sort: LS.get('sort', {k:'profit4', d:-1, view:'flip'}),
+  f: Object.assign({q:'', view:'flip', mem:'all', minVol:1000, min:'', max:'', roi:'', sig:'', stale:true}, LS.get('filters', {}))
+};
+st.f.q = '';
+function saveA(){
+  const keep = {}; const cutoff = now() - 24*3600e3;
+  const ids = Object.keys(st.A).filter(id => st.A[id] && st.A[id].t > cutoff)
+    .sort((a,b) => (st.pins.has(+b) - st.pins.has(+a)) || (st.A[b].t - st.A[a].t)).slice(0, 400);
+  for (const id of ids) keep[id] = st.A[id];
+  st.A = keep; LS.set('analyses', keep);
+}
+function savePins(){ LS.set('pins', [...st.pins]); }
+
+/* ========================= bulk data ========================= */
+async function loadMapping(){
+  const m = await api('/mapping');
+  for (const it of m) st.map.set(it.id, it);
+  const byName = new Map(m.map(it => [it.name.toLowerCase(), it.id]));
+  for (const n of EXEMPT_NAMES){ const id = byName.get(n.toLowerCase()); if (id != null) EXEMPT.add(id); }
+}
+async function loadLatest(){ const j = await api('/latest'); st.latest = j.data || {}; st.tLatest = now(); }
+async function load1h(){ const j = await api('/1h'); st.h1 = j.data || {}; st.t1h = now(); }
+async function load24h(){ const j = await api('/24h'); st.h24 = j.data || {}; st.t24h = now(); }
+
+function qtyFor(limit, flow4h){
+  // flow4h: volume on the constraining side in a 4h window
+  const share = (S.share || 10) / 100;
+  let q = flow4h > 0 ? Math.max(Math.min(1, flow4h), share * flow4h) : 0;
+  if (limit) q = Math.min(q, limit);
+  return q;
+}
+
+function buildRows(){
+  const rows = [];
+  const nat = st.latest[561];
+  const natureCost = nat ? (nat.high || nat.low || 0) : 0;
+  for (const [idStr, L] of Object.entries(st.latest)){
+    const id = +idStr, m = st.map.get(id);
+    if (!m) continue;
+    const d24 = st.h24[idStr] || {}, d1 = st.h1[idStr] || {};
+    const lv24 = d24.lowPriceVolume || 0, hv24 = d24.highPriceVolume || 0;
+    const low = L.low, high = L.high;
+    const r = {
+      id, name: m.name, nameL: m.name.toLowerCase(), icon: m.icon, members: !!m.members, limit: m.limit || null, highalch: m.highalch || null,
+      low, high, lowTime: L.lowTime, highTime: L.highTime,
+      vol24: lv24 + hv24, lv24, hv24, vol1: (d1.lowPriceVolume||0) + (d1.highPriceVolume||0),
+      avgLow24: d24.avgLowPrice, avgHigh24: d24.avgHighPrice
+    };
+    // fat-finger guard: a single trade far outside the recent average doesn't count toward the margin
+    const hiRef = d1.highPriceVolume ? d1.avgHighPrice : d24.avgHighPrice;
+    const loRef = d1.lowPriceVolume ? d1.avgLowPrice : d24.avgLowPrice;
+    r.effHigh = high; r.effLow = low;
+    if (high != null && hiRef && high > hiRef * 1.5){ r.effHigh = Math.round(hiRef); r.outHigh = true; }
+    if (low != null && loRef && low < loRef * 0.6){ r.effLow = Math.round(loRef); r.outLow = true; }
+    if (low != null && high != null){
+      r.margin = r.effHigh - tax(r.effHigh, id) - r.effLow;
+      r.roi = r.effLow > 0 ? r.margin / r.effLow : null;
+      r.qty4 = qtyFor(r.limit, Math.min(lv24, hv24) / 6);
+      r.profit4 = r.margin * r.qty4;
+    }
+    if (r.highalch && low != null){
+      r.alch = r.highalch - low - natureCost;
+      r.alchLimit = r.limit ? r.alch * r.limit : null;
+    }
+    r.dip24 = (low != null && r.avgLow24) ? low / r.avgLow24 - 1 : null;
+    r.age = Math.min(L.lowTime ? nowS()-L.lowTime : 1e9, L.highTime ? nowS()-L.highTime : 1e9);
+    rows.push(r);
+  }
+  st.rows = rows;
+}
+
+/* ========================= deep analysis ========================= */
+const tsCache = new Map();
+const TS_TTL = { '24h': 4*60e3, '7d': 20*60e3, '30d': 60*60e3 };
+async function getTS(id, lb, force){
+  const k = id + ':' + lb, c = tsCache.get(k);
+  if (c && !force && now() - c.t < TS_TTL[lb]) return c.d;
+  const j = await api('/timeseries?id=' + id + '&lookback=' + lb);
+  const d = (j.data || []).slice().sort((a,b)=>a.timestamp-b.timestamp);
+  tsCache.set(k, {t: now(), d});
+  return d;
+}
+const has = v => v != null && isFinite(v);
+
+// sustained level over ~3h windows within one day of hourly buckets
+function sustainedDay(bk){
+  // bk: hourly buckets of one day (sorted). returns {low, lowPeak, high}
+  let sLow = null, sLowPeak = null, sHigh = null;
+  for (let i = 0; i < bk.length; i++){
+    const t0 = bk[i].timestamp, w = [];
+    for (let j = i; j < bk.length && bk[j].timestamp < t0 + 3*3600; j++) w.push(bk[j]);
+    const lows = w.filter(b=>has(b.avgLowPrice)).map(b=>b.avgLowPrice);
+    const highs = w.filter(b=>has(b.avgHighPrice)).map(b=>b.avgHighPrice);
+    if (lows.length >= 2){
+      const held = Math.max(...lows);  // price stayed at or under this for the window
+      sLow = sLow == null ? held : Math.min(sLow, held);
+      const peak = Math.min(...lows);  // low side stayed at or above this
+      sLowPeak = sLowPeak == null ? peak : Math.max(sLowPeak, peak);
+    }
+    if (highs.length >= 2){
+      const held = Math.min(...highs); // buyers paid at least this through the window
+      sHigh = sHigh == null ? held : Math.max(sHigh, held);
+    }
+  }
+  if (sLow == null){ const l = bk.filter(b=>has(b.avgLowPrice)).map(b=>b.avgLowPrice); if (l.length){ sLow = Math.min(...l); sLowPeak = Math.max(...l); } }
+  if (sHigh == null){ const h = bk.filter(b=>has(b.avgHighPrice)).map(b=>b.avgHighPrice); if (h.length) sHigh = median(h); }
+  return {low: sLow, lowPeak: sLowPeak, high: sHigh};
+}
+
+function analyzeData(id, d5, d1, d6){
+  const L = st.latest[id] || {};
+  const A = {id, t: now(), v: 1};
+
+  // ---- sell-through from hourly extremes (24h of 5m buckets) ----
+  const byHour = new Map();
+  for (const b of d5){
+    const h = Math.floor(b.timestamp/3600);
+    let o = byHour.get(h); if (!o){ o = {his:[], los:[]}; byHour.set(h, o); }
+    if (has(b.avgHighPrice) && b.highPriceVolume > 0) o.his.push(b.avgHighPrice);
+    if (has(b.avgLowPrice) && b.lowPriceVolume > 0) o.los.push(b.avgLowPrice);
+  }
+  // per hour: a level the market comfortably reached (upper quartile of the 5-min highs / lower quartile of the lows),
+  // so one odd trade in an hour doesn't count as "reached"
+  let hiArr = [...byHour.values()].filter(o=>o.his.length).map(o=>quantile(o.his, .75));
+  let loArr = [...byHour.values()].filter(o=>o.los.length).map(o=>quantile(o.los, .25));
+  A.basis = '24h';
+  if (hiArr.length < 10 || loArr.length < 10){
+    const recent = d1.slice(-72);
+    hiArr = recent.filter(b=>has(b.avgHighPrice)).map(b=>b.avgHighPrice);
+    loArr = recent.filter(b=>has(b.avgLowPrice)).map(b=>b.avgLowPrice);
+    A.basis = '72h';
+  }
+  A.nHours = Math.min(hiArr.length, loArr.length);
+  A.thin = A.nHours < 6;
+  if (hiArr.length >= 3 && loArr.length >= 3){
+    A.sellAt = Math.floor(quantile(hiArr, .5));
+    A.quickSell = Math.floor(quantile(hiArr, .2));
+    A.buyAt = Math.ceil(quantile(loArr, .5));
+    A.quickBuy = Math.ceil(quantile(loArr, .8));
+    // phase-aware: if the market is already past a level right now, use the live price
+    const fresh = t => t && nowS() - t < 1800;
+    // (only when the live trade is inside the normal hourly range, so one fat-finger trade can't move the targets)
+    const loQ10 = quantile(loArr, .1) * 0.97, hiQ90 = quantile(hiArr, .9) * 1.03;
+    if (has(L.low) && fresh(L.lowTime) && L.low >= loQ10){ A.buyAt = Math.min(A.buyAt, L.low); }
+    if (has(L.high) && fresh(L.highTime) && L.high <= hiQ90){ A.sellAt = Math.max(A.sellAt, L.high); A.quickBuy = Math.min(A.quickBuy, L.high); }
+    if (has(L.low) && fresh(L.lowTime) && L.low >= loQ10){ A.quickSell = Math.max(A.quickSell, L.low); }
+    A.quickBuy = Math.max(A.quickBuy, A.buyAt);
+    A.quickSell = Math.min(A.quickSell, A.sellAt);
+    A.net = A.sellAt - tax(A.sellAt, id) - A.buyAt;
+    A.quickNet = A.quickSell - tax(A.quickSell, id) - A.quickBuy;
+    A.roi = A.buyAt > 0 ? A.net / A.buyAt : null;
+  }
+
+  // ---- floor / reliable high from 7 days of hourly buckets ----
+  const days = [];
+  if (d1.length){
+    const end = d1[d1.length-1].timestamp + 3600;
+    for (let k = 0; k < 7; k++){
+      const a = end - (k+1)*86400, b = end - k*86400;
+      const bk = d1.filter(x => x.timestamp >= a && x.timestamp < b);
+      if (bk.length) { const s = sustainedDay(bk); if (s.low != null || s.high != null) days.push(s); }
+    }
+  }
+  // regime: if the last 2 days built a clearly higher floor than the week, the old floor no longer applies
+  const allLows = days.map(d=>d.low).filter(has);
+  const floor7 = allLows.length ? Math.min(...allLows) : null;
+  const recentLows = days.slice(0, 2).map(d=>d.low).filter(has);
+  const floor2 = recentLows.length ? Math.min(...recentLows) : null;
+  let rdays = days;
+  if (has(floor7) && has(floor2) && days.length >= 4 && floor2 > floor7 * 1.05){
+    rdays = days.slice(0, 2); A.regime = 'up'; A.floor7 = floor7;
+    // still climbing: today's floor is clearly above yesterday's, so only today counts
+    if (has(days[0].low) && has(days[1].low) && days[0].low > days[1].low * 1.05) rdays = days.slice(0, 1);
+  }
+  const dl = rdays.map(d=>d.low).filter(has), dh = rdays.map(d=>d.high).filter(has), dp = rdays.map(d=>d.lowPeak).filter(has);
+  A.days = days.length;
+  A.floor = dl.length ? Math.min(...dl) : null;
+  A.relHigh = dh.length ? Math.min(...dh) : null;
+  A.bestHigh = dh.length ? Math.max(...dh) : null;
+  A.lowPeak = dp.length ? median(dp) : null;
+
+  // ---- current price (smoothed) & position ----
+  const last5 = d5.slice(-6).filter(b=>has(b.avgLowPrice)).map(b=>b.avgLowPrice);
+  A.curLow = last5.length ? median(last5) : L.low;
+  const last5h = d5.slice(-6).filter(b=>has(b.avgHighPrice)).map(b=>b.avgHighPrice);
+  A.curHigh = last5h.length ? median(last5h) : L.high;
+  if (L.low != null && L.lowTime && nowS() - L.lowTime < 900) A.curLow = A.curLow != null ? Math.min(A.curLow, Math.max(L.low, A.curLow*0.97)) : L.low;
+  if (has(A.curLow) && has(A.floor)){
+    A.gap = A.curLow / A.floor - 1;
+    const top = has(A.lowPeak) && A.lowPeak > A.floor ? A.lowPeak : (has(A.relHigh) ? A.relHigh : null);
+    A.pos = top && top > A.floor ? Math.max(0, Math.min(1.25, (A.curLow - A.floor) / (top - A.floor))) : null;
+  }
+
+  // ---- regime: last 3h vs same 3h yesterday (hourly) ----
+  if (d1.length >= 30){
+    const endT = d1[d1.length-1].timestamp;
+    const mid = b => has(b.avgLowPrice) && has(b.avgHighPrice) ? (b.avgLowPrice + b.avgHighPrice)/2 : (has(b.avgLowPrice) ? b.avgLowPrice : b.avgHighPrice);
+    const nowB = d1.filter(b => b.timestamp > endT - 3*3600).map(mid).filter(has);
+    const prevB = d1.filter(b => b.timestamp > endT - 27*3600 && b.timestamp <= endT - 24*3600).map(mid).filter(has);
+    if (nowB.length && prevB.length) A.chg24 = mean(nowB) / mean(prevB) - 1;
+  }
+
+  // ---- 7d / 30d trend & range (6h buckets) ----
+  if (d6.length){
+    const mid = b => has(b.avgLowPrice) && has(b.avgHighPrice) ? (b.avgLowPrice + b.avgHighPrice)/2 : (has(b.avgLowPrice) ? b.avgLowPrice : b.avgHighPrice);
+    const endT = d6[d6.length-1].timestamp;
+    const w1 = d6.filter(b => b.timestamp > endT - 7*86400).map(mid).filter(has);
+    const w0 = d6.filter(b => b.timestamp > endT - 14*86400 && b.timestamp <= endT - 7*86400).map(mid).filter(has);
+    const wf = d6.filter(b => b.timestamp <= d6[0].timestamp + 7*86400).map(mid).filter(has);
+    if (w1.length && w0.length) A.trend7 = mean(w1) / mean(w0) - 1;
+    if (w1.length && wf.length) A.trend30 = mean(w1) / mean(wf) - 1;
+    const lows = d6.map(b=>b.avgLowPrice).filter(has), highs = d6.map(b=>b.avgHighPrice).filter(has);
+    A.low30 = lows.length ? Math.min(...lows) : null;
+    A.high30 = highs.length ? Math.max(...highs) : null;
+  }
+
+  // ---- daily cycle by local hour (7d hourly) ----
+  if (d1.length >= 48){
+    const sums = Array(24).fill(0), cnt = Array(24).fill(0);
+    for (let i = 0; i < d1.length; i++){
+      const b = d1[i]; if (!has(b.avgLowPrice)) continue;
+      const near = d1.filter(x => Math.abs(x.timestamp - b.timestamp) <= 12*3600 && has(x.avgLowPrice)).map(x=>x.avgLowPrice);
+      if (near.length < 12) continue;
+      const base = mean(near);
+      const hr = new Date(b.timestamp*1000).getHours();
+      sums[hr] += b.avgLowPrice / base - 1; cnt[hr]++;
+    }
+    const cyc = sums.map((s,i) => cnt[i] >= 3 ? s/cnt[i] : null);
+    if (cyc.filter(has).length >= 16){
+      A.cycle = cyc.map(x => x == null ? null : +x.toFixed(5));
+      const valid = cyc.map((v,h)=>({v,h})).filter(o=>has(o.v)).sort((a,b)=>a.v-b.v);
+      A.cheapHours = valid.slice(0,3).map(o=>o.h);
+      A.dearHours = valid.slice(-3).map(o=>o.h).reverse();
+      A.cycleAmp = valid[valid.length-1].v - valid[0].v;
+    }
+  }
+
+  // ---- volume per 4h (7d hourly) ----
+  if (d1.length){
+    const lv = d1.reduce((s,b)=>s+(b.lowPriceVolume||0),0), hv = d1.reduce((s,b)=>s+(b.highPriceVolume||0),0);
+    const hours = Math.max(1, (d1[d1.length-1].timestamp - d1[0].timestamp)/3600 + 1);
+    A.lvH = lv/hours; A.hvH = hv/hours;
+    const m = st.map.get(id);
+    A.qty4 = qtyFor(m && m.limit, Math.min(A.lvH, A.hvH) * 4);
+    if (has(A.net)) A.profit4 = A.net * A.qty4;
+  }
+
+  // ---- dump / spike (last 15 min vs 24h) ----
+  if (d5.length >= 36){
+    const lows = d5.map(b=>b.avgLowPrice).filter(has), highs = d5.map(b=>b.avgHighPrice).filter(has);
+    const lvs = d5.map(b=>b.lowPriceVolume||0), hvs = d5.map(b=>b.highPriceVolume||0);
+    const tail = d5.slice(-3);
+    const tl = tail.map(b=>b.avgLowPrice).filter(has), th = tail.map(b=>b.avgHighPrice).filter(has);
+    const tlv = tail.reduce((s,b)=>s+(b.lowPriceVolume||0),0), thv = tail.reduce((s,b)=>s+(b.highPriceVolume||0),0);
+    const mlv = Math.max(1, mean(lvs)*3), mhv = Math.max(1, mean(hvs)*3);
+    if (tl.length && lows.length){ A.drop = 1 - Math.min(...tl) / median(lows); A.dump = A.drop >= 0.06 && tlv >= 3*mlv; }
+    if (th.length && highs.length){ A.rise = Math.max(...th) / median(highs) - 1; A.spike = A.rise >= 0.08 && thv >= 3*mhv; }
+  }
+
+  // ---- signal ----
+  let sig = 'WAIT', why = '';
+  const near = has(A.gap) && A.gap <= S.near/100;
+  if (A.thin || !has(A.floor)) { sig = 'THIN'; why = 'Not enough trades in the last day to read a cycle.'; }
+  else if (A.dump) { sig = 'DUMP'; why = 'Last 15 min traded ' + pctAbs(A.drop) + ' under the 24h median on heavy sell volume.'; }
+  else if ((near || (has(A.pos) && A.pos <= 0.25)) && has(A.trend7) && A.trend7 < -0.06) { sig = 'FALLING'; why = 'Near the bottom of its range, but the 7-day trend is ' + pct(A.trend7) + '. The floor may break.'; }
+  else if (has(A.gap) && A.gap < -0.01 && has(A.chg24) && A.chg24 < -0.03) { sig = 'FALLING'; why = 'Broke ' + pctAbs(-A.gap) + ' under its floor and is ' + pct(A.chg24) + ' vs the same hours yesterday. Wait for it to settle.'; }
+  else if ((near || (has(A.pos) && A.pos <= 0.25)) && has(A.net) && A.net > 0) { sig = 'BUY'; why = near ? (A.gap < 0 ? 'Trading ' + pctAbs(-A.gap) + ' under its floor.' : 'Within ' + pctAbs(A.gap) + ' of its floor.') : 'In the bottom quarter of its daily range.'; }
+  else if (A.spike || (has(A.pos) && A.pos >= 0.75)) { sig = 'SELL'; why = A.spike ? 'Instant-buy price spiked ' + pctAbs(A.rise) + ' over the 24h median.' : 'In the top quarter of its daily range.'; }
+  else { why = has(A.pos) ? 'Mid-range (' + Math.round(A.pos*100) + '% of the daily low-side range).' : 'Mid-range.'; }
+  if (A.regime === 'up') why += ' Price moved into a higher range recently, so the floor only uses the new range (7-day floor was ' + gp(A.floor7, 1) + ').';
+  A.sig = sig; A.why = why; A.near = near;
+  return A;
+}
+
+async function analyze(id, force){
+  const [d5, d1, d6] = await Promise.all([getTS(id,'24h',force), getTS(id,'7d',force), getTS(id,'30d',force)]);
+  const A = analyzeData(id, d5, d1, d6);
+  st.A[id] = A;
+  return A;
+}
+
+/* ========================= analysis queue ========================= */
+const Q = {items: [], set: new Set(), running: 0, conc: 2, done: 0, total: 0, errs: 0};
+function enqueue(ids, front){
+  for (const id of ids){
+    if (Q.set.has(id)){ if (front){ const i = Q.items.indexOf(id); if (i > 0){ Q.items.splice(i,1); Q.items.unshift(id); } } continue; }
+    Q.set.add(id); Q.total++;
+    front ? Q.items.unshift(id) : Q.items.push(id);
+  }
+  pump();
+}
+function pump(){
+  while (Q.running < Q.conc && Q.items.length){
+    const id = Q.items.shift(); Q.running++;
+    analyze(id, false).catch(() => { Q.errs++; }).finally(() => {
+      Q.running--; Q.set.delete(id); Q.done++;
+      if (!Q.items.length && !Q.running){ Q.done = 0; Q.total = 0; Q.errs = 0; saveA(); }
+      scheduleRender(); if (openId === id) renderDrawer();
+      setTimeout(pump, 60);
+    });
+  }
+  showProgress();
+}
+function deepTop(){
+  const ids = st.view.slice(0, S.deepN).map(r => r.id).filter(id => !st.A[id] || now() - st.A[id].t > 4*60e3);
+  enqueue(ids, false);
+}
+function deepPins(force){
+  const ids = [...st.pins].filter(id => force || !st.A[id] || now() - st.A[id].t > 4*60e3);
+  enqueue(ids, true);
+}
+
+
+/* ========================= icons (one set, 1.75 stroke) ========================= */
+const ICONS = {
+  star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  refresh: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
+  sliders: '<path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+  alert: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16-1.9-1.9"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>'
+};
+function ic(name, cls){ return '<svg class="i' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>'; }
+const SIG_WORD = {BUY:'Buy', DUMP:'Dump', SELL:'Sell', FALLING:'Falling', WAIT:'Wait', THIN:'Thin'};
+function sigTag(A){ return A ? '<span class="sig s-' + A.sig + '"><i></i>' + SIG_WORD[A.sig] + '</span>' : ''; }
+const NIL = '<span class="nil">–</span>';
+const SK = '<span class="sk"></span>';
+function hh(h){ return String(h).padStart(2,'0') + ':00'; }
+function starBtn(id){ const on = st.pins.has(id); return '<button class="icon-btn' + (on ? ' on' : '') + '" data-pin="' + id + '" aria-pressed="' + on + '" title="' + (on ? 'Unpin' : 'Pin to watchlist') + '" aria-label="' + (on ? 'Unpin' : 'Pin to watchlist') + '">' + ic('star') + '</button>'; }
+function fresh(A, mins){ return A && now() - A.t < mins*60e3; }
+
+/* ========================= market table ========================= */
+const COLS = {
+  flip: [
+    {k:'pin', t:'', nosort:true},
+    {k:'name', t:'Item', l:true},
+    {k:'low', t:'Buy'},
+    {k:'high', t:'Sell'},
+    {k:'margin', t:'Margin'},
+    {k:'roi', t:'ROI'},
+    {k:'limit', t:'Limit'},
+    {k:'vol24', t:'Volume 24h'},
+    {k:'profit4', t:'Profit / 4h'},
+    {k:'sig', t:'Signal', l:true, sep:true},
+    {k:'floor', t:'Floor'},
+    {k:'gap', t:'Gap'},
+    {k:'buyAt', t:'Buy at'},
+    {k:'sellAt', t:'Sell at'},
+    {k:'net', t:'Target net'},
+    {k:'tprofit4', t:'Target / 4h'}
+  ],
+  alch: [
+    {k:'pin', t:'', nosort:true},
+    {k:'name', t:'Item', l:true},
+    {k:'low', t:'Buy'},
+    {k:'highalch', t:'High alch'},
+    {k:'alch', t:'Profit / cast'},
+    {k:'limit', t:'Limit'},
+    {k:'alchLimit', t:'Profit / limit'},
+    {k:'vol24', t:'Volume 24h'},
+    {k:'sig', t:'Signal', l:true, sep:true},
+    {k:'floor', t:'Floor'},
+    {k:'buyAt', t:'Buy at'}
+  ]
+};
+const SORT_WORDS = {profit4:'profit per 4 hours', margin:'margin', roi:'ROI', vol24:'24h volume', low:'buy price', high:'sell price', limit:'buy limit', name:'name',
+  sig:'signal', floor:'floor', gap:'gap to floor', buyAt:'buy-at price', sellAt:'sell-at price', net:'target net', tprofit4:'target profit per 4 hours',
+  highalch:'high alch value', alch:'profit per cast', alchLimit:'profit per buy limit'};
+const SIG_RANK = {DUMP:5, BUY:4, SELL:2, WAIT:1, FALLING:0, THIN:-1};
+function val(r, k){
+  const A = st.A[r.id];
+  switch(k){
+    case 'sig': return A ? SIG_RANK[A.sig] : null;
+    case 'floor': return A ? A.floor : null;
+    case 'gap': return A ? A.gap : null;
+    case 'buyAt': return A ? A.buyAt : null;
+    case 'sellAt': return A ? A.sellAt : null;
+    case 'net': return A ? A.net : null;
+    case 'tprofit4': return A ? A.profit4 : null;
+    case 'name': return r.nameL;
+    default: return r[k];
+  }
+}
+function applyFilters(){
+  const f = st.f, q = f.q.trim().toLowerCase();
+  const minV = +f.minVol || 0, mn = f.min === '' ? null : +f.min, mx = f.max === '' ? null : +f.max, roi = f.roi === '' ? null : +f.roi/100;
+  let v = st.rows.filter(r => {
+    if (q && !r.nameL.includes(q)) return false;
+    if (f.mem === 'f2p' && r.members) return false;
+    if (f.mem === 'p2p' && !r.members) return false;
+    if (!q && r.vol24 < minV) return false;
+    if (mn != null && (r.low == null || r.low < mn)) return false;
+    if (mx != null && (r.low == null || r.low > mx)) return false;
+    if (f.stale && r.age > 3600) return false;
+    if (f.view === 'alch'){ if (r.alch == null) return false; if (roi != null && !(r.alch / r.low >= roi)) return false; }
+    else if (roi != null && !(r.roi >= roi)) return false;
+    if (f.sig){
+      const A = st.A[r.id];
+      if (f.sig === 'analyzed') { if (!A) return false; }
+      else if (f.sig === 'NEAR') { if (!A || !A.near) return false; }
+      else if (!A || A.sig !== f.sig) return false;
+    }
+    return true;
+  });
+  const {k, d} = st.sort;
+  v.sort((a,b) => {
+    const x = val(a,k), y = val(b,k);
+    if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
+    if (typeof x === 'string') return d * x.localeCompare(y);
+    return d * (x - y);
+  });
+  st.view = v;
+}
+function deep(r, fn){ const A = st.A[r.id]; return A ? fn(A) : (Q.set.has(r.id) ? SK : NIL); }
+function staleTag(t){ return t && nowS() - t > 600 ? '<span class="stale">' + ago(t) + ' ago</span>' : ''; }
+function cell(r, c){
+  const cls = (c.l ? 'l' : '') + (c.sep ? ' sep' : '');
+  const td = inner => '<td class="' + cls + '">' + inner + '</td>';
+  switch(c.k){
+    case 'pin': return '<td class="pin">' + starBtn(r.id) + '</td>';
+    case 'name': return td('<div class="item"><img loading="lazy" src="' + esc(iconUrl(r.icon)) + '" alt=""><span>' + esc(r.name) + '</span></div>');
+    case 'low': return '<td title="' + gp(r.low,1) + ' gp' + (r.outLow ? '. One-off trade far under the last hour, margin uses ' + gp(r.effLow,1) : '') + '">' + (r.outLow ? '<span class="flag">' + ic('alert','sm') + '</span>' : '') + gp(r.low) + staleTag(r.lowTime) + '</td>';
+    case 'high': return '<td title="' + gp(r.high,1) + ' gp' + (r.outHigh ? '. One-off trade far over the last hour, margin uses ' + gp(r.effHigh,1) : '') + '">' + (r.outHigh ? '<span class="flag">' + ic('alert','sm') + '</span>' : '') + gp(r.high) + staleTag(r.highTime) + '</td>';
+    case 'margin': return '<td class="' + (r.margin>0?'up':r.margin<0?'down':'') + '" title="After ' + gp(tax(r.effHigh,r.id),1) + ' gp tax">' + gp(r.margin) + '</td>';
+    case 'roi': return td(pct(r.roi));
+    case 'limit': return td(r.limit ? r.limit.toLocaleString('en-US') : NIL);
+    case 'vol24': return td(vol(r.vol24));
+    case 'profit4': return '<td class="' + (r.profit4>0?'up':'') + '" title="' + (r.qty4!=null ? r.qty4.toFixed(1) + ' items per 4h' : '') + '"><b>' + gp(r.profit4) + '</b></td>';
+    case 'highalch': return td(gp(r.highalch));
+    case 'alch': return '<td class="' + (r.alch>0?'up':'down') + '"><b>' + gp(r.alch) + '</b></td>';
+    case 'alchLimit': return td(gp(r.alchLimit));
+    case 'sig': return td(deep(r, A => sigTag(A)));
+    case 'floor': return td(deep(r, A => gp(A.floor)));
+    case 'gap': return td(deep(r, A => pct(A.gap)));
+    case 'buyAt': return td(deep(r, A => gp(A.buyAt)));
+    case 'sellAt': return td(deep(r, A => gp(A.sellAt)));
+    case 'net': return '<td class="' + (st.A[r.id] ? (st.A[r.id].net>0?'up':'down') : '') + '">' + deep(r, A => gp(A.net)) + '</td>';
+    case 'tprofit4': return td(deep(r, A => gp(A.profit4)));
+  }
+  return '<td></td>';
+}
+function renderTable(){
+  const cols = COLS[st.f.view];
+  if (st.sort.view !== st.f.view){ st.sort = st.f.view === 'alch' ? {k:'alch', d:-1, view:'alch'} : {k:'profit4', d:-1, view:'flip'}; }
+  $('#thead').innerHTML = '<tr>' + cols.map(c => '<th class="' + (c.l?'l':'') + (c.sep?' sep':'') + '" data-k="' + c.k + '"' + (c.nosort?' data-ns="1"':'') +
+    (st.sort.k===c.k ? ' aria-sort="' + (st.sort.d<0?'descending':'ascending') + '"' : '') + '>' + c.t + (st.sort.k===c.k ? '<span class="arr">' + (st.sort.d<0?'↓':'↑') + '</span>' : '') + '</th>').join('') + '</tr>';
+  if (!st.rows.length){
+    $('#tbody').innerHTML = Array.from({length:10}, () => '<tr>' + cols.map((c,i) => '<td class="' + (c.l?'l':'') + '">' + (i===0 ? '' : '<span class="sk" style="width:' + (c.k==='name'?160:56) + 'px;' + (c.l?'margin-left:0':'') + '"></span>') + '</td>').join('') + '</tr>').join('');
+    $('#more').innerHTML = '<span class="spin"></span> Loading live prices';
+    $('#mktTitle').textContent = 'Every tradeable item';
+    return;
+  }
+  applyFilters();
+  $('#mktTitle').textContent = st.view.length.toLocaleString('en-US') + ' items, ranked by ' + (SORT_WORDS[st.sort.k] || 'value');
+  $('#mktSub').textContent = st.f.view === 'alch' ? 'High alch value minus the buy price and one nature rune.' : 'Live instant-buy and instant-sell prices, refreshed every ' + S.refresh + ' seconds.';
+  const rows = st.view.slice(0, st.shown);
+  $('#tbody').innerHTML = rows.length ? rows.map(r => '<tr data-id="' + r.id + '">' + cols.map(c => cell(r,c)).join('') + '</tr>').join('')
+    : '<tr><td colspan="' + cols.length + '" class="empty">No items match these filters. Try a lower minimum volume or clear the search.</td></tr>';
+  $('#more').innerHTML = st.view.length > st.shown ? '<button class="btn" id="btnMore">Show 150 more</button><span>' + (st.view.length - st.shown).toLocaleString('en-US') + ' left</span>' : (st.view.length ? 'All ' + st.view.length.toLocaleString('en-US') + ' items shown' : '');
+}
+
+/* ========================= hero: best flips right now ========================= */
+function picksList(){
+  return Object.values(st.A).filter(A => fresh(A, 30) && st.map.has(A.id) && (A.sig === 'BUY' || A.sig === 'DUMP') && has(A.net) && A.net > 0 && has(A.profit4) && A.profit4 > 0)
+    .sort((a,b) => b.profit4 - a.profit4);
+}
+function planDl(A){
+  return '<dl class="plan">' +
+    '<div><dt>Buy at</dt><dd>' + gp(A.buyAt,1) + '</dd></div>' +
+    '<div><dt>Sell at</dt><dd>' + gp(A.sellAt,1) + '</dd></div>' +
+    '<div><dt>Each</dt><dd class="' + (A.net>0?'up':'down') + '">' + (A.net>0?'+':'') + gp(A.net,1) + '</dd></div></dl>';
+}
+function pickCard(A){
+  const m = st.map.get(A.id);
+  return '<article class="pick" data-id="' + A.id + '">' +
+    '<div class="pick-top"><img src="' + esc(iconUrl(m.icon)) + '" alt=""><div class="t"><h3>' + esc(m.name) + '</h3>' + sigTag(A) + '</div>' + starBtn(A.id) + '</div>' +
+    '<div class="pick-metric"><b>' + gp(A.profit4) + '</b><span>profit per 4h</span></div>' +
+    planDl(A) +
+    '<p class="why">' + esc(A.why) + '</p></article>';
+}
+function skPick(){ return '<article class="pick" aria-hidden="true"><div class="pick-top"><span class="sk" style="width:36px;height:36px;border-radius:8px"></span><div class="t"><span class="sk md" style="width:60%"></span></div></div><span class="sk lg" style="width:55%"></span><span class="sk" style="width:100%"></span><span class="sk" style="width:80%"></span></article>'; }
+function renderHero(){
+  const picks = picksList(), scanning = Q.total > 0, scanned = Object.values(st.A).filter(A => fresh(A, 30));
+  const t = $('#heroTitle'), s = $('#heroSub');
+  if (picks.length){
+    const best = picks[0], bm = st.map.get(best.id);
+    t.textContent = picks.length + (picks.length === 1 ? ' item is' : ' items are') + ' at a good buy price right now';
+    s.textContent = 'Best: ' + bm.name + ', about ' + gp(best.profit4) + ' profit per 4 hours. Ranked by profit per buy limit, after the 2% tax.';
+    $('#picks').innerHTML = picks.slice(0, 4).map(pickCard).join('');
+  } else if (scanning || !st.rows.length || !scanned.length){
+    t.textContent = 'Finding the best flips';
+    s.textContent = st.rows.length ? 'Reading 7 days of history for the ' + S.deepN + ' most profitable items.' : 'Loading live Grand Exchange prices.';
+    $('#picks').innerHTML = skPick() + skPick() + skPick() + skPick();
+  } else {
+    const cheap = scanned.map(A => A.cheapHours && A.cheapHours[0]).filter(h => h != null);
+    const hr = cheap.length ? median(cheap) : null;
+    t.textContent = 'Nothing is near its floor right now';
+    s.textContent = 'All ' + scanned.length + ' scanned items are mid-range or falling.' + (hr != null ? ' Prices usually dip around ' + hh(Math.round(hr)) + ' your time.' : '');
+    $('#picks').innerHTML = '<div class="picks-empty"><h3>Check back after the next dip</h3><p>Every scan reruns automatically every 10 minutes. You can also lower the minimum volume to scan smaller markets.</p></div>';
+  }
+  renderCta();
+}
+function renderCta(){
+  const busy = Q.total > 0;
+  [['#btnDeep', 'Scan top ' + S.deepN + ' items'], ['#btnWatchRefresh', 'Recheck pinned items']].forEach(([sel, label]) => {
+    const b = $(sel); if (!b) return;
+    b.setAttribute('aria-busy', busy);
+    b.innerHTML = busy ? '<span class="spin"></span>Scanning ' + Q.done + ' of ' + Q.total : ic('scan') + label;
+  });
+  $('#ctaNote').textContent = lastDeep ? 'Last scan ' + ago(Math.floor(lastDeep/1000)) + ' ago' + (S.autoDeep ? ', rescans every 10 min' : '') : 'Reads 7 days of history for the top items';
+}
+function showProgress(){ renderCta(); }
+
+/* ========================= watchlist ========================= */
+function card(id){
+  const m = st.map.get(id); if (!m) return '';
+  const A = st.A[id];
+  if (!A) return '<article class="card" data-id="' + id + '"><div class="pick-top"><img src="' + esc(iconUrl(m.icon)) + '" alt=""><div class="t"><h3>' + esc(m.name) + '</h3></div>' + starBtn(id) + '</div><span class="sk" style="width:100%"></span><span class="sk" style="width:70%"></span></article>';
+  return '<article class="card" data-id="' + id + '">' +
+    '<div class="pick-top"><img loading="lazy" src="' + esc(iconUrl(m.icon)) + '" alt=""><div class="t"><h3>' + esc(m.name) + '</h3>' + sigTag(A) + '</div>' + starBtn(id) + '</div>' +
+    planDl(A) +
+    '<p class="why">' + esc(A.why) + '</p>' +
+    '<p class="meta">' + gp(A.profit4) + ' per 4h' + (A.cheapHours ? ' · cheapest ' + hh(A.cheapHours[0]) : '') + ' · checked ' + ago(Math.floor(A.t/1000)) + ' ago</p>' +
+  '</article>';
+}
+function renderWatch(){
+  const pins = [...st.pins].filter(id => st.map.has(id));
+  $('#pinTitle').textContent = pins.length ? pins.length + ' pinned item' + (pins.length === 1 ? '' : 's') : 'No pinned items yet';
+  $('#pinBody').innerHTML = pins.length
+    ? '<div class="cards">' + pins.sort((a,b)=>((st.A[a]&&st.A[a].gap)??9)-((st.A[b]&&st.A[b].gap)??9)).map(card).join('') + '</div>'
+    : '<div class="empty-card">' + ic('star') + '<div><h3>Pin items to track them here</h3><p>Use the star on any row or card. Pinned items are rechecked every 5 minutes, and their signal tells you when to buy or list.</p></div></div>';
+  const near = Object.values(st.A).filter(A => !st.pins.has(A.id) && fresh(A, 30) && st.map.has(A.id) && (A.sig === 'BUY' || A.sig === 'DUMP') && has(A.net) && A.net > 0)
+    .sort((a,b) => (a.sig==='DUMP'?-1:0) - (b.sig==='DUMP'?-1:0) || (a.gap??9) - (b.gap??9)).slice(0, 40);
+  $('#nearTitle').textContent = near.length ? near.length + ' item' + (near.length === 1 ? ' is' : 's are') + ' near their floor now' : (Q.total ? 'Scanning for items near their floor' : 'No items near their floor right now');
+  $('#nearBody').innerHTML = near.length ? '<div class="cards">' + near.map(A => card(A.id)).join('') + '</div>'
+    : (Q.total ? '<div class="cards">' + skPick() + skPick() + skPick() + '</div>' : '<div class="empty-card">' + ic('scan') + '<div><h3>Nothing at a good price in the last scan</h3><p>Scan more items from the Market tab, or wait for the next automatic scan.</p></div></div>');
+}
+
+/* ========================= drawer & charts ========================= */
+let openId = null, chartRange = '24h';
+function openDrawer(id){
+  openId = +id; document.body.classList.add('open');
+  renderDrawer();
+  if (!st.A[openId] || now() - st.A[openId].t > 3*60e3) enqueue([openId], true);
+}
+function closeDrawer(){ openId = null; document.body.classList.remove('open'); }
+function stat(k, v, s){ return '<div class="stat"><div class="k">' + k + '</div><div class="v">' + v + '</div>' + (s ? '<div class="s">' + s + '</div>' : '') + '</div>'; }
+function renderDrawer(){
+  if (openId == null) return;
+  const id = openId, m = st.map.get(id) || {name:'Item '+id}, L = st.latest[id] || {}, A = st.A[id];
+  const r = st.rows.find(x => x.id === id) || {};
+  const loading = !A;
+  let h = '<div class="d-in"><div class="d-head"><img src="' + esc(iconUrl(m.icon)) + '" alt=""><div class="t"><h2>' + esc(m.name) + '</h2>' +
+    '<div class="sub">' + (m.members ? 'Members' : 'Free-to-play') + ' · buy limit ' + (m.limit ? m.limit.toLocaleString('en-US') : 'unknown') + ' per 4h' + (m.highalch ? ' · high alch ' + gp(m.highalch,1) : '') + (EXEMPT.has(id) ? ' · no GE tax' : '') + '</div></div>' +
+    starBtn(id) +
+    '<button class="icon-btn" id="dRe" title="Rescan this item" aria-label="Rescan this item">' + (Q.set.has(id) ? '<span class="spin"></span>' : ic('refresh')) + '</button>' +
+    '<a class="icon-btn" href="https://prices.runescape.wiki/osrs/item/' + id + '" target="_blank" rel="noopener" title="Open on the Wiki" aria-label="Open on the Wiki">' + ic('external') + '</a>' +
+    '<button class="icon-btn" id="dClose" title="Close" aria-label="Close">' + ic('x') + '</button></div>';
+  h += '<p class="d-why">' + (loading ? '<span class="sk md" style="width:70%"></span>' : sigTag(A) + '&nbsp; ' + esc(A.why)) + '</p>';
+  if (loading){
+    h += '<dl class="tp">' + ['Buy at','Sell at','Profit each'].map(k => '<div><dt>' + k + '</dt><dd><span class="sk lg" style="width:80%"></span></dd></div>').join('') + '</dl>';
+    h += '<div class="tp-sum"><span class="sk" style="width:240px"></span></div>';
+  } else {
+    h += '<dl class="tp">' +
+      '<div><dt>Buy at</dt><dd>' + gp(A.buyAt,1) + '</dd><div class="note">' + (has(L.low) && A.buyAt === L.low ? 'Trading here now' : 'Reached in half of all hours') + '</div></div>' +
+      '<div><dt>Sell at</dt><dd>' + gp(A.sellAt,1) + '</dd><div class="note">' + (has(L.high) && A.sellAt === L.high ? 'Buyers paying this now' : 'Reached in half of all hours') + '</div></div>' +
+      '<div><dt>Profit each</dt><dd class="' + (A.net>0?'up':'down') + '">' + (A.net>0?'+':'') + gp(A.net,1) + '</dd><div class="note">ROI ' + pct(A.roi) + ' after ' + gp(tax(A.sellAt,id),1) + ' tax</div></div></dl>';
+    h += '<div class="tp-sum"><span>Per 4h <b>' + gp(A.profit4,1) + '</b> on ' + (has(A.qty4) ? Math.round(A.qty4).toLocaleString('en-US') : '–') + ' items</span>' +
+      '<span>Quick flip <b class="' + (A.quickNet>0?'up':'down') + '">' + gp(A.quickNet,1) + '</b> each (buy ' + gp(A.quickBuy) + ', sell ' + gp(A.quickSell) + ')</span>' +
+      '<span>Live margin <b>' + gp(r.margin,1) + '</b>' + (r.outHigh || r.outLow ? ' (one-off trade ignored)' : '') + '</span></div>';
+  }
+  const S_ = loading ? Array.from({length:8}, () => stat('<span class="sk" style="width:60%"></span>', '<span class="sk md" style="width:80%;margin-top:6px"></span>')).join('') :
+    stat('Instant-sell now', gp(L.low,1), ago(L.lowTime) + ' ago') +
+    stat('Instant-buy now', gp(L.high,1), ago(L.highTime) + ' ago') +
+    stat(A.regime === 'up' ? 'Floor, new range' : 'Floor, 7 days', gp(A.floor,1), A.regime === 'up' ? '7-day floor ' + gp(A.floor7) : 'Gap ' + pct(A.gap)) +
+    stat('Reliable high', gp(A.relHigh,1), 'Best day ' + gp(A.bestHigh)) +
+    stat('Range position', has(A.pos) ? Math.round(A.pos*100) + '%' : '–', '0% is the floor') +
+    stat('vs yesterday', '<span class="' + (A.chg24>0?'up':A.chg24<0?'down':'') + '">' + pct(A.chg24) + '</span>', 'Same hours') +
+    stat('7-day trend', '<span class="' + (A.trend7>0?'up':A.trend7<0?'down':'') + '">' + pct(A.trend7) + '</span>', '30 days ' + pct(A.trend30)) +
+    stat('30-day range', gp(A.low30) + ' to ' + gp(A.high30)) +
+    stat('Sold per hour', vol(A.lvH), '7-day average') +
+    stat('Bought per hour', vol(A.hvH), '7-day average') +
+    stat('Daily swing', A.cycle ? pctAbs(A.cycleAmp) : '–', A.cheapHours ? 'Cheapest ' + hh(A.cheapHours[0]) : '') +
+    stat('Quick buy / sell', gp(A.quickBuy) + ' / ' + gp(A.quickSell), 'Fills in 80% of hours');
+  h += '<div class="stats">' + S_ + '</div>';
+  h += '<section class="d-sec"><div class="d-sec-head"><h3>Price history</h3><div class="toggles" id="cRange">' + ['24h','7d','30d'].map(x => '<button data-r="' + x + '" aria-pressed="' + (x===chartRange) + '">' + x + '</button>').join('') + '</div></div>' +
+    '<div class="chart"><div class="legend"><span><i style="background:var(--s-low)"></i>Instant-sell</span><span><i style="background:var(--s-high)"></i>Instant-buy</span><span><i style="background:var(--ink-3)"></i>Floor, buy at, sell at</span></div>' +
+    '<div id="cMain"><span class="sk" style="height:250px;border-radius:8px"></span></div><div id="cVol"></div><div class="tip" id="tip"></div></div></section>';
+  h += '<section class="d-sec"><div class="d-sec-head"><h3>When it is cheapest, by hour of your day</h3></div><div class="chart" id="cCycle"><span class="sk" style="height:130px;border-radius:8px"></span></div></section></div>';
+  $('#drawer').innerHTML = h;
+  if (!loading) loadCharts();
+}
+async function loadCharts(){
+  const id = openId; if (id == null) return;
+  try{
+    const d = await getTS(id, chartRange, false);
+    if (id !== openId) return;
+    drawMain(d); drawCycle();
+  }catch(e){ const el = $('#cMain'); if (el) el.innerHTML = '<p class="err">Could not load history: ' + esc(e.message) + '</p>'; }
+}
+function niceTicks(min, max, n){
+  const span = max - min || Math.abs(max) || 1, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1,2,2.5,5,10].map(x=>x*mag).find(x => span/x <= n) || 10*mag;
+  const t = []; for (let v = Math.ceil(min/step)*step; v <= max + 1e-9; v += step) t.push(v);
+  return t;
+}
+function drawMain(d){
+  const box = $('#cMain'), vbox = $('#cVol'); if (!box) return;
+  const W = box.clientWidth || 680, H = 250, VH = 56, ml = 56, mr = 4, mt = 8, mb = 22;
+  const A = st.A[openId] || {};
+  const pts = d.filter(b => has(b.avgLowPrice) || has(b.avgHighPrice));
+  if (pts.length < 2){ box.innerHTML = '<p class="muted">Not enough trades in this range.</p>'; vbox.innerHTML=''; return; }
+  const x0 = d[0].timestamp, x1 = d[d.length-1].timestamp;
+  const vals = []; for (const b of pts){ if (has(b.avgLowPrice)) vals.push(b.avgLowPrice); if (has(b.avgHighPrice)) vals.push(b.avgHighPrice); }
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  for (const ref of [A.floor, A.buyAt, A.sellAt]) if (has(ref) && ref > lo*0.9 && ref < hi*1.1){ lo = Math.min(lo, ref); hi = Math.max(hi, ref); }
+  const pad = (hi - lo) * 0.06 || hi*0.01 || 1; lo -= pad; hi += pad;
+  const X = t => ml + (t - x0) / Math.max(1, x1 - x0) * (W - ml - mr);
+  const Y = v => mt + (1 - (v - lo) / (hi - lo)) * (H - mt - mb);
+  const path = key => { let s = '', pen = false, prevT = null; const step = d.length > 1 ? (d[1].timestamp - d[0].timestamp) : 300;
+    for (const b of d){ const v = b[key]; if (!has(v)) { if (prevT != null && b.timestamp - prevT > step*3) pen = false; continue; }
+      s += (pen ? 'L' : 'M') + X(b.timestamp).toFixed(1) + ',' + Y(v).toFixed(1); pen = true; prevT = b.timestamp; } return s; };
+  let svg = '<svg width="' + W + '" height="' + H + '" role="img" aria-label="Price history">';
+  for (const t of niceTicks(lo, hi, 5)) svg += '<line x1="' + ml + '" x2="' + (W-mr) + '" y1="' + Y(t) + '" y2="' + Y(t) + '" stroke="var(--line)" stroke-width="1"/><text x="' + (ml-8) + '" y="' + (Y(t)+4) + '" text-anchor="end">' + gp(t) + '</text>';
+  const span = x1 - x0, xt = span <= 2*86400 ? 6*3600 : span <= 10*86400 ? 86400 : 5*86400;
+  for (let t = Math.ceil(x0/xt)*xt; t <= x1; t += xt){
+    const dt = new Date(t*1000), lab = xt < 86400 ? hh(dt.getHours()) : dt.toLocaleDateString([], {month:'short', day:'numeric'});
+    svg += '<text x="' + X(t) + '" y="' + (H-4) + '" text-anchor="middle">' + lab + '</text>';
+  }
+  for (const [n, v] of [['Floor', A.floor], ['Buy at', A.buyAt], ['Sell at', A.sellAt]]) if (has(v) && v >= lo && v <= hi)
+    svg += '<line x1="' + ml + '" x2="' + (W-mr) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="var(--ink-3)" stroke-dasharray="3 4" stroke-width="1"/><text x="' + (W-mr) + '" y="' + (Y(v)-5) + '" text-anchor="end">' + n + ' ' + gp(v) + '</text>';
+  svg += '<path d="' + path('avgLowPrice') + '" fill="none" stroke="var(--s-low)" stroke-width="2" stroke-linejoin="round"/>';
+  svg += '<path d="' + path('avgHighPrice') + '" fill="none" stroke="var(--s-high)" stroke-width="2" stroke-linejoin="round"/>';
+  svg += '<line id="xh" x1="0" x2="0" y1="' + mt + '" y2="' + (H-mb) + '" stroke="var(--ink-3)" stroke-width="1" visibility="hidden"/>';
+  svg += '<circle id="dl" r="4" fill="var(--s-low)" stroke="var(--panel)" stroke-width="2" visibility="hidden"/><circle id="dh" r="4" fill="var(--s-high)" stroke="var(--panel)" stroke-width="2" visibility="hidden"/>';
+  svg += '<rect x="' + ml + '" y="0" width="' + (W-ml-mr) + '" height="' + H + '" fill="transparent" id="hit"/></svg>';
+  box.innerHTML = svg;
+  const vmax = Math.max(1, ...d.map(b => (b.lowPriceVolume||0) + (b.highPriceVolume||0)));
+  const bw = Math.max(1, (W - ml - mr) / d.length - 1);
+  let vs = '<svg width="' + W + '" height="' + VH + '" role="img" aria-label="Volume"><text x="' + (ml-8) + '" y="12" text-anchor="end">' + vol(vmax) + '</text><text x="' + (ml-8) + '" y="' + (VH-2) + '" text-anchor="end">Vol</text>';
+  for (const b of d){ const v = (b.lowPriceVolume||0) + (b.highPriceVolume||0); if (!v) continue; const hgt = Math.max(1, v / vmax * (VH - 6)); vs += '<rect x="' + (X(b.timestamp) - bw/2).toFixed(1) + '" y="' + (VH - hgt).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + hgt.toFixed(1) + '" fill="var(--vol)" rx="1"/>'; }
+  vbox.innerHTML = vs + '</svg>';
+  const hit = box.querySelector('#hit'), tip = $('#tip');
+  hit.addEventListener('mousemove', ev => {
+    const rect = box.getBoundingClientRect(), mx = ev.clientX - rect.left;
+    const t = x0 + (mx - ml) / (W - ml - mr) * (x1 - x0);
+    let best = null, bd = Infinity; for (const b of d){ const dd = Math.abs(b.timestamp - t); if (dd < bd){ bd = dd; best = b; } }
+    if (!best) return;
+    const bx = X(best.timestamp);
+    const xh = box.querySelector('#xh'); xh.setAttribute('x1', bx); xh.setAttribute('x2', bx); xh.setAttribute('visibility','visible');
+    for (const [sel, key] of [['#dl','avgLowPrice'], ['#dh','avgHighPrice']]){ const c = box.querySelector(sel);
+      if (has(best[key])){ c.setAttribute('cx', bx); c.setAttribute('cy', Y(best[key])); c.setAttribute('visibility','visible'); } else c.setAttribute('visibility','hidden'); }
+    tip.innerHTML = '<b>' + new Date(best.timestamp*1000).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) + '</b>' +
+      '<div><span>Instant-sell</span><span>' + gp(best.avgLowPrice,1) + '</span></div>' +
+      '<div><span>Instant-buy</span><span>' + gp(best.avgHighPrice,1) + '</span></div>' +
+      '<div><span>Volume</span><span>' + vol(best.lowPriceVolume) + ' / ' + vol(best.highPriceVolume) + '</span></div>';
+    tip.style.display = 'block';
+    const tw = tip.offsetWidth; let tx = bx + 16 + 16; if (tx + tw > W + 16) tx = bx - tw;
+    tip.style.left = tx + 'px'; tip.style.top = (box.offsetTop + 8) + 'px';
+  });
+  hit.addEventListener('mouseleave', () => { tip.style.display = 'none'; ['#xh','#dl','#dh'].forEach(s => { const e = box.querySelector(s); if (e) e.setAttribute('visibility','hidden'); }); });
+}
+function drawCycle(){
+  const box = $('#cCycle'); if (!box) return;
+  const A = st.A[openId];
+  if (!A || !A.cycle){ box.innerHTML = '<p class="muted">Not enough hourly trades to show a daily pattern.</p>'; return; }
+  const W = (box.clientWidth || 680) - 32, H = 130, ml = 44, mr = 0, mt = 8, mb = 20;
+  const vals = A.cycle.filter(has), mx = Math.max(0.001, ...vals.map(Math.abs));
+  const bw = (W - ml - mr) / 24;
+  const Y = v => mt + (1 - (v + mx) / (2*mx)) * (H - mt - mb);
+  const curH = new Date().getHours();
+  let s = '<div class="legend"><span><i class="sq" style="background:var(--div-neg)"></i>Cheaper than that day’s average</span><span><i class="sq" style="background:var(--div-pos)"></i>Pricier</span><span><i class="sq" style="background:none;outline:1.5px solid var(--ink);outline-offset:-1.5px"></i>Now</span></div>';
+  s += '<svg width="' + W + '" height="' + H + '" role="img" aria-label="Average price by hour">';
+  s += '<line x1="' + ml + '" x2="' + (W-mr) + '" y1="' + Y(0) + '" y2="' + Y(0) + '" stroke="var(--line-2)"/>';
+  s += '<text x="' + (ml-8) + '" y="' + (Y(mx)+8) + '" text-anchor="end">' + pct(mx) + '</text><text x="' + (ml-8) + '" y="' + (Y(-mx)) + '" text-anchor="end">' + pct(-mx) + '</text>';
+  A.cycle.forEach((v, h) => {
+    const x = ml + h*bw + 2;
+    if (has(v)){
+      const y = Math.min(Y(v), Y(0)), hgt = Math.max(1, Math.abs(Y(v) - Y(0)));
+      s += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + Math.max(2, bw-4).toFixed(1) + '" height="' + hgt.toFixed(1) + '" rx="2" fill="' + (v < 0 ? 'var(--div-neg)' : 'var(--div-pos)') + '"' + (h===curH ? ' stroke="var(--ink)" stroke-width="1.5"' : '') + '><title>' + hh(h) + ': ' + pct(v,2) + ' vs that day</title></rect>';
+    }
+    if (h % 3 === 0) s += '<text x="' + (x + (bw-4)/2) + '" y="' + (H-4) + '" text-anchor="middle">' + hh(h) + '</text>';
+  });
+  box.innerHTML = s + '</svg>';
+}
+
+/* ========================= render orchestration ========================= */
+let tab = 'market', rafPending = false;
+function scheduleRender(){ if (rafPending) return; rafPending = true; requestAnimationFrame(() => { rafPending = false; render(); }); }
+function render(){
+  if (tab === 'market'){ renderHero(); renderTable(); }
+  else if (tab === 'watch'){ renderWatch(); renderCta(); }
+  renderStatus();
+}
+function renderStatus(){
+  const el = $('#live');
+  if (st.err) el.innerHTML = '<span class="dot err"></span><span class="txt">Can’t reach the Wiki, retrying</span>';
+  else if (!st.tLatest) el.innerHTML = '<span class="spin"></span><span class="txt">Connecting to the Wiki</span>';
+  else el.innerHTML = '<span class="dot"></span><span class="txt">Live, updated ' + Math.round((now() - st.tLatest)/1000) + 's ago</span>';
+  $('#btnRefresh').innerHTML = refreshing ? '<span class="spin"></span>' : ic('refresh');
+}
+
+/* ========================= refresh loop ========================= */
+let refreshing = false, lastDeep = 0;
+async function refresh(force){
+  if (refreshing) return; refreshing = true; renderStatus();
+  try{
+    const jobs = [loadLatest()];
+    if (force || now() - st.t1h > 10*60e3) jobs.push(load1h());
+    if (force || now() - st.t24h > 30*60e3) jobs.push(load24h());
+    await Promise.all(jobs);
+    st.err = null;
+    buildRows();
+    if (S.autoDeep && now() - lastDeep > 10*60e3){ lastDeep = now(); applyFilters(); deepTop(); }
+    deepPins(false);
+  }catch(e){ st.err = e.message || String(e); }
+  finally{ refreshing = false; scheduleRender(); }
+}
+
+/* ========================= events ========================= */
+function setPressed(group, el){ document.querySelectorAll(group + ' button').forEach(b => b.setAttribute('aria-pressed', b === el)); }
+function bindFilters(){
+  const f = st.f;
+  $('#fVol').value = f.minVol; $('#fMin').value = f.min; $('#fMax').value = f.max; $('#fRoi').value = f.roi; $('#fSig').value = f.sig; $('#fStale').checked = f.stale; $('#fMem').value = f.mem;
+  document.querySelectorAll('#fView button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === f.view));
+  const upd = () => { f.minVol = $('#fVol').value; f.min = $('#fMin').value; f.max = $('#fMax').value; f.roi = $('#fRoi').value; f.sig = $('#fSig').value; f.stale = $('#fStale').checked; f.mem = $('#fMem').value;
+    st.shown = 150; LS.set('filters', Object.assign({}, f, {q:''})); scheduleRender(); };
+  ['#fVol','#fMin','#fMax','#fRoi','#fSig','#fStale','#fMem'].forEach(s => $(s).addEventListener('change', upd));
+  ['#fVol','#fMin','#fMax','#fRoi'].forEach(s => $(s).addEventListener('input', upd));
+  let qt; $('#fQ').addEventListener('input', e => { clearTimeout(qt); qt = setTimeout(() => { f.q = e.target.value; st.shown = 150; scheduleRender(); }, 120); });
+  $('#fView').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; f.view = b.dataset.v; setPressed('#fView', b); upd(); });
+}
+function bindSettings(){
+  $('#setShare').value = S.share; $('#setDeepN').value = S.deepN; $('#setAutoDeep').checked = S.autoDeep; $('#setNear').value = S.near; $('#setRefresh').value = S.refresh; $('#setTheme').value = S.theme;
+  const upd = () => {
+    S.share = Math.max(1, Math.min(100, +$('#setShare').value || DEFAULTS.share));
+    S.deepN = Math.max(10, Math.min(200, +$('#setDeepN').value || DEFAULTS.deepN));
+    S.autoDeep = $('#setAutoDeep').checked;
+    S.near = Math.max(0.5, Math.min(15, +$('#setNear').value || DEFAULTS.near));
+    S.refresh = Math.max(30, Math.min(600, +$('#setRefresh').value || DEFAULTS.refresh));
+    S.theme = $('#setTheme').value;
+    applyTheme(); LS.set('settings', S); buildRows(); scheduleRender();
+  };
+  document.querySelectorAll('.pop input,.pop select').forEach(el => el.addEventListener('change', upd));
+  document.addEventListener('click', e => { const d = $('#settings'); if (d.open && !d.contains(e.target)) d.open = false; });
+}
+function applyTheme(){ if (S.theme) document.documentElement.setAttribute('data-theme', S.theme); else document.documentElement.removeAttribute('data-theme'); }
+function togglePin(id){
+  id = +id; if (st.pins.has(id)) st.pins.delete(id); else { st.pins.add(id); enqueue([id], true); }
+  savePins(); scheduleRender(); if (openId === id) renderDrawer();
+}
+document.addEventListener('click', e => {
+  const pin = e.target.closest('[data-pin]'); if (pin){ e.stopPropagation(); togglePin(pin.dataset.pin); return; }
+  const th = e.target.closest('th[data-k]');
+  if (th && !th.dataset.ns){ const k = th.dataset.k; st.sort = {k, d: st.sort.k === k ? -st.sort.d : (k === 'name' || k === 'gap' || k === 'floor' ? 1 : -1), view: st.f.view}; LS.set('sort', st.sort); scheduleRender(); return; }
+  const tr = e.target.closest('tr[data-id],.pick[data-id],.card[data-id]'); if (tr){ openDrawer(tr.dataset.id); return; }
+  if (e.target.closest('#btnMore')){ st.shown += 150; scheduleRender(); return; }
+  if (e.target.closest('#dClose') || e.target.id === 'scrim'){ closeDrawer(); return; }
+  if (e.target.closest('#dRe') && openId != null){ tsCache.forEach((v,k) => { if (k.startsWith(openId + ':')) tsCache.delete(k); }); delete st.A[openId]; enqueue([openId], true); renderDrawer(); return; }
+  const rb = e.target.closest('#cRange button'); if (rb){ chartRange = rb.dataset.r; setPressed('#cRange', rb); const b = $('#cMain'); if (b) b.innerHTML = '<span class="sk" style="height:250px;border-radius:8px"></span>'; loadCharts(); return; }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+$('#tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return; tab = b.dataset.tab;
+  document.querySelectorAll('#tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+  ['market','watch','guide'].forEach(t => $('#tab-' + t).hidden = t !== tab);
+  if (tab === 'watch') deepPins(false);
+  render();
+});
+$('#btnRefresh').addEventListener('click', () => refresh(true));
+$('#btnDeep').addEventListener('click', () => { if (Q.total) return; lastDeep = now(); applyFilters(); deepTop(); renderHero(); });
+$('#btnWatchRefresh').addEventListener('click', () => { if (Q.total) return; deepPins(true); renderWatch(); });
+window.addEventListener('resize', () => { if (openId != null) { clearTimeout(window._rz); window._rz = setTimeout(loadCharts, 150); } });
+
+/* ========================= boot ========================= */
+async function boot(){
+  applyTheme(); bindFilters(); bindSettings();
+  $('#icSearch').outerHTML = ic('search','sm');
+  document.querySelector('#settings summary').innerHTML = ic('sliders');
+  render();
+  try{ await loadMapping(); }
+  catch(e){ st.err = 'mapping'; renderStatus(); setTimeout(boot, 15000); return; }
+  await refresh(true);
+  setInterval(() => { if (now() - st.tLatest >= S.refresh*1000 - 500) refresh(false); renderStatus(); if (tab === 'market' && lastDeep) renderCta(); }, 1000);
+  setInterval(() => deepPins(false), 5*60e3);
+}
+boot();
+</script>
+</body>
+</html>
